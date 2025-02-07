@@ -41,33 +41,33 @@ void plotWithGnuplot(const std::vector<double>& values) {
 int main() {
     Tensor a = Tensor(5, true, "a");
     Tensor b = Tensor(1, true, "b");
-    double lr1 = 1, lr2 = 1;
+    Tensor c = Tensor(10, true, "c");
+    Tensor d = Tensor(5, true, "d");
 
     std::vector<double> lossTracker;
 
     int iter = 0;
-    while ((lr1 + lr2) > 0.0001) {
+    while (iter < 1000) {
         // Zero-Grad
         for (auto& [tag, tensor] : Tensor::tensors) {
             tensor->updaetGrad(0);
         }
 
         // Forward Pass
-        // Tensor c = a + b;
-        Tensor d = a * a;
-        Tensor e = b * b;
-
-        Tensor f = d + e;
+        Tensor e = a + b;
+        Tensor f = c.exp();
+        Tensor g = e / f;
+        Tensor h = e * d;
+        h.updateTag("final");
 
         // Backward Pass
-        f.backward();
-
-        lr1 = a.fetchGrad() * 0.001;
-        lr2 = b.fetchGrad() * 0.001;
+        h.backward();
 
         // Weight Update using Grads
-        a.updateData(a.fetchData() - a.fetchGrad() * lr1);
-        b.updateData(b.fetchData() - b.fetchGrad() * lr2);
+        a.updateData(a.fetchData() - a.fetchGrad() * 0.0001);
+        b.updateData(b.fetchData() - b.fetchGrad() * 0.0001);
+        c.updateData(c.fetchData() - c.fetchGrad() * 0.0001);
+        d.updateData(d.fetchData() - d.fetchGrad() * 0.0001);
 
         std::cout << "Updated tensors's data after iteration " << iter << std::endl;
 
@@ -75,11 +75,9 @@ int main() {
             std::cout << *tensor << std::endl;
         }
 
-        lossTracker.push_back(d.fetchData());
+        lossTracker.push_back(h.fetchData());
 
         iter++;
-        if (iter % 10000)
-            std::cout << "Running for " << iter << " steps!" << std::endl;
     }
 
     plotWithGnuplot(lossTracker);

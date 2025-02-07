@@ -24,7 +24,6 @@ class Tensor {
     std::map<std::string, bool> gradVisited;
 
    public:
-    static std::vector<Tensor*> allTensors;
     static std::map<std::string, Tensor*> tensors;
     Tensor(double data, bool requiresGrad = false, std::string tensorTag = "", bool trainable = false)
         : data_(data), requiresGrad(requiresGrad), trainable(trainable) {
@@ -33,12 +32,12 @@ class Tensor {
         else
             this->tag = tensorTag;
 
-        allTensors.push_back(this);
         if (tag != "")
             tensors[tag] = this;
     }
 
     Tensor() : data_(0), requiresGrad(false), tag("") {};
+    ~Tensor() { std::cout << "Destoyed! " << this->tag << std::endl; };
 
     friend std::ostream& operator<<(std::ostream& os, const Tensor& tensor) {
         os << "Tensor(";
@@ -191,16 +190,16 @@ class Tensor {
     }
 
     void backward(bool isRoot = true, bool verbose = false) {
+        if (isRoot) {
+            grad = 1.0;
+            gradVisited.clear();
+        }
+
         // Skip if already visited
         if (gradVisited[this->tag]) {
             return;
         }
         gradVisited[this->tag] = true;
-
-        if (isRoot) {
-            grad = 1.0;
-            gradVisited.clear();
-        }
 
         if (requiresGrad && _backward) {
             if (verbose)
@@ -217,14 +216,9 @@ class Tensor {
         }
     }
 
-    void removeNonTrainableParamsFromCompGraph() {
-        for (auto tensor : Tensor::allTensors) {
-            std::cout << *tensor << std::endl;
-        }
-    }
-
     double fetchData() { return data_; }
     double fetchGrad() { return grad; }
     void updateData(double value) { this->data_ = value; }
     void updaetGrad(double value) { this->grad = value; }
+    void updateTag(std::string newTag) { this->tag = newTag; }
 };
