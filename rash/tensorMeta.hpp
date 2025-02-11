@@ -1,8 +1,10 @@
 #include <cblas.h>
 
+#include <algorithm>
 #include <cassert>
 #include <functional>
 #include <iostream>
+#include <map>
 #include <random>
 #include <vector>
 
@@ -10,7 +12,6 @@
 // and it's different orientations/views
 class TensorMeta {
     int numel;
-    std::random_device rd;
     std::vector<int> tensorSize;
     std::vector<double> rawData;
 
@@ -36,12 +37,11 @@ class TensorMeta {
     }
 
     ~TensorMeta() = default;
-
-    // TensorMeta() : tensorSize({0}) {};
     TensorMeta(const TensorMeta& other) : numel(other.numel), tensorSize(other.tensorSize), rawData(other.rawData) {}
 
     void fillRandomData() {
-        std::mt19937 gen;
+        std::random_device rd;
+        std::mt19937 gen(rd());
         std::uniform_real_distribution<> dis(0, 1);
 
         for (int i = 0; i < numel; i++) {
@@ -78,14 +78,53 @@ class TensorMeta {
         std::cout << std::endl;
     }
 
-    static std::vector<int> fetchBroadcastedSize(const TensorMeta& dat1, const TensorMeta& dat2) {
-        if (!dat1.tensorSize.size() || !dat2.tensorSize.size()) {
+    TensorMeta squeeze(std::vector<int> dims) const {
+        std::vector<int> newSize(tensorSize);
+        std::sort(dims.begin(), dims.end(), std::greater<>());
+        for (auto& idx : dims) {
+            if (idx < ndim() && tensorSize[idx] == 1)
+                newSize.erase(newSize.begin() + idx);
+        }
+
+        return TensorMeta(rawData, newSize);
+    }
+
+    TensorMeta squeeze(int dim = 0) const {
+        std::vector<int> dims = {dim};
+        return squeeze(dims);
+    }
+
+    TensorMeta unsqueeze(int dim = 0) const {
+        std::vector<int> newSize(tensorSize);
+        newSize.insert(newSize.begin() + dim, 1);
+        return TensorMeta(rawData, newSize);
+    }
+
+    TensorMeta permute(std::vector<int> dims) const {
+        int n = ndim();
+        assert(dims.size() == ndim() && "Dim Size not matching");
+        std::vector<int> newDims;
+        std::map<int, int> dimUpdate;
+        for (auto& dim : dims) {
+            if (!dimUpdate[dim] && dim < n) {
+                dimUpdate[dim] = tensorSize[dim];
+            } else {
+                throw std::runtime_error("Failed due to inconsistent dims");
+            }
+        }
+        for (auto& dim : dims) {
+            newDims.push_back(tensorSize[dim]);
+        }
+        return TensorMeta(rawData, newDims);
+    }
+
+    static std::vector<int> fetchBroadcastedSize(const std::vector<int>& sz1, const std::vector<int>& sz2) {
+        if (!sz1.size() || !sz2.size()) {
             throw std::length_error("Tensor should have atleats a dimension!");
             std::exit(-1);
         }
 
-        std::vector<int> curr(dat1.tensorSize.rbegin(), dat1.tensorSize.rend()),
-            incm(dat2.tensorSize.rbegin(), dat2.tensorSize.rend());
+        std::vector<int> curr(sz1.rbegin(), sz1.rend()), incm(sz2.rbegin(), sz2.rend());
 
         int idx = 0;
         int n = curr.size(), m = incm.size();
@@ -103,7 +142,6 @@ class TensorMeta {
                     finSize.push_back(curr[idx]);
                 } else {
                     throw std::length_error("Size mismatch in Broadcasting");
-                    std::exit(-1);
                 }
             } else if (idx < n) {
                 finSize.push_back(curr[idx]);
@@ -117,17 +155,11 @@ class TensorMeta {
         return finSize;
     }
 
-    static std::vector<int> fetchStride(const TensorMeta& data) {
-        int currDimStride = 1;
-        std::vector<int> stride(data.tensorSize.size(), 0);
-        for (int idx = data.tensorSize.size() - 1; idx >= 0; idx--) {
-            stride[idx] = currDimStride;
-            // std::cout << stride[idx] << std::endl;
-            currDimStride *= data.tensorSize[idx];
-        }
-
-        return stride;
+    static std::vector<int> fetchBroadcastedSize(const TensorMeta& dat1, const TensorMeta& dat2) {
+        return fetchBroadcastedSize(dat1.tensorSize, dat2.tensorSize);
     }
+
+    static std::vector<int> fetchStride(const TensorMeta& data) { return fetchStride(data.tensorSize); }
 
     static std::vector<int> fetchStride(const std::vector<int>& shape) {
         int currDimStride = 1;
@@ -183,6 +215,8 @@ class TensorMeta {
         return broadcastedMetaStorage;
     }
 
+    int ndim() const { return tensorSize.size(); }
+
     void shape() {
         std::cout << "Shape : ";
         for (auto& el : tensorSize) {
@@ -201,7 +235,12 @@ class TensorMeta {
         return TensorMeta::broadcast(*this, other, op);
     }
 
-    TensorMeta operator*(const TensorMeta& other) {
+    // TensorMeta operator*(const TensorMeta& other) {
+    //     std::function<double(double, double)> op = [](double val1, double val2) { return val1 * val2; };
+    //     return TensorMeta::broadcast(*this, other, op);
+    // }
+
+    TensorMeta operator*(const TensorMeta& other) const {
         std::function<double(double, double)> op = [](double val1, double val2) { return val1 * val2; };
         return TensorMeta::broadcast(*this, other, op);
     }
@@ -211,68 +250,222 @@ class TensorMeta {
         return TensorMeta::broadcast(*this, other, op);
     }
 
-    static bool isAbletoPerformMatmul(const TensorMeta& dat1, const TensorMeta& dat2) {
-        // The process doesn't allow broadcasting in matmul as of now
-
+    static bool validateMatmul(const TensorMeta& dat1, const TensorMeta& dat2) {
         std::vector<int> v1, v2;
+        int dim1 = dat1.ndim(), dim2 = dat2.ndim();
         v1 = dat1.tensorSize;
         v2 = dat2.tensorSize;
 
-        std::reverse(v1.begin(), v1.end());
-        std::reverse(v2.begin(), v2.end());
-
-        if (v1.size() < 2 || v1.size() < 2) {
-            std::cerr << "Not enough dimensions to perform matmul operation\n";
-            return false;
-        }
-        if (v1[0] != v2[1]) {
-            std::cerr << "Dimension mismatch for matmul operation\n";
-            return false;
-        }
-        for (int idx = 2; idx < v1.size(); idx++) {
-            if (v1[idx] != v2[idx]) {
-                std::cerr << "Dimension mismatch, possibly as broadcasting not allowed\n";
+        if (dim1 == 1 && dim2 == 1) {
+            return v1[0] == v2[0];
+        } else if (dim1 == 1 && dim2 == 2) {
+            // (K, ) x (K, N)
+            return v1[0] == v2[0];
+        } else if (dim1 == 2 && dim2 == 1) {
+            // (M, K) x (K, )
+            return v1[1] == v2[0];
+        } else if (dim1 == 2 && dim2 == 2) {
+            // (M, K) x (K, N)
+            return v1[1] == v2[0];
+        } else if (dim1 == 1 && dim2 > 2) {
+            // Batched MatMul
+            // (K, ) x (A, B, ..., K, N)
+            return v1[0] == v2[dim2 - 2];
+        } else if (dim1 > 2 && dim2 == 1) {
+            // Batched MatMul
+            // (A, B, ..., M, K) x (K, )
+            return v1[dim1 - 1] == v2[0];
+        } else {
+            if (v1[dim1 - 1] != v2[dim2 - 2])
+                return false;
+            std::vector<int> v1Part(v1.begin(), v1.end() - 2), v2Part(v2.begin(), v2.end() - 2);
+            try {
+                if (!v1Part.size())
+                    v1Part = {1};
+                if (!v2Part.size())
+                    v2Part = {1};
+                // If broadcastable
+                std::vector<int> bcSize = fetchBroadcastedSize(v1Part, v2Part);
+                return true;
+            } catch (const std::exception& e) {
+                // If not broadcastable
+                std::cout << e.what() << std::endl;
                 return false;
             }
         }
-        return true;
     }
 
-    static std::vector<int> fetchMatmulShape(const TensorMeta& dat1, const TensorMeta& dat2) {
-        bool matMulexecFlag = isAbletoPerformMatmul(dat1, dat2);
-        if (!matMulexecFlag) {
-            throw std::runtime_error("");
+    static std::vector<int> fetchMatmulSize(const TensorMeta& dat1, const TensorMeta& dat2) {
+        bool execFlag = validateMatmul(dat1, dat2);
+        if (!execFlag) {
+            throw std::runtime_error("Shape mismatch for MatMul\n");
         }
-        std::vector<int> matmulSize = dat1.tensorSize;
-        matmulSize[matmulSize.size() - 1] = dat2.tensorSize.back();
+        std::vector<int> sz1(dat1.tensorSize), sz2(dat2.tensorSize);
+        int M = sz1[sz1.size() - 2], K = sz1[sz1.size() - 1], N = sz2[sz2.size() - 1];
+
+        // If both Meta Storage are 2d Matrix
+        if (sz1.size() == 2 && sz2.size() == 2) {
+            return {M, N};
+        }
+
+        // Partition extra dim to fetch broadcasted size of batches
+        std::vector<int> v1Part(sz1.begin(), sz1.end() - 2), v2Part(sz2.begin(), sz2.end() - 2);
+        if (!v1Part.size())
+            v1Part = {1};
+        if (!v2Part.size())
+            v2Part = {1};
+        std::vector<int> matmulSize = fetchBroadcastedSize(v1Part, v2Part);
+
+        // Add M, N dimension where
+        // dat1 -> ..., M, K
+        // dat2 -> ..., K, N
+        matmulSize.push_back(M);
+        matmulSize.push_back(N);
 
         return matmulSize;
     }
 
     static void matmulAtomic(const std::vector<double>& A, const std::vector<double>& B, std::vector<double>& out,
-                             int offSetA, int offSetB, int offSetOut, int M, int N, int K) {
-        // std::cout << "M : "<< M << std::endl;
-        // std::cout << "N : "<< N << std::endl;
-        // std::cout << "K : "<< K << std::endl;
+                             int offSetA, int offSetB, int offSetOut, int M, int K, int N) {
+        // A ->   M x K
+        // B ->   K x N
+        // out -> M x N
+        assert(A.size() >= offSetA + M * K && "A vector is too small!");
+        assert(B.size() >= offSetB + K * N && "B vector is too small!");
+        assert(out.size() >= offSetOut + M * N && "Output vector is too small!");
+        cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, 1.0, &A[offSetA], K, &B[offSetB], N, 0.0,
+                    &out[offSetOut], N);
+    }
 
-        // std::cout << "A Size : "<< A.size() << std::endl;
-        // std::cout << "B Size : "<< B.size() << std::endl;
-        // std::cout << "out Size : "<< out.size() << std::endl;
+    static int getMatmulBatchIndex(const std::vector<int>& shape, const std::vector<int>& stride,
+                                   const std::vector<int>& indices) {
+        int offSet = 0;
+        int dimShift = indices.size() - shape.size() + 2;
+        for (int idx = 0; idx < shape.size() - 2; ++idx) {
+            offSet += (shape[idx] == 1) ? 0 : indices[idx + dimShift] * stride[idx];
+        }
+        return offSet;
+    }
 
-        assert(A.size() >= offSetA + M * N && "A vector is too small!");
-        assert(B.size() >= offSetB + N * K && "B vector is too small!");
-        assert(out.size() >= offSetOut + M * K && "Output vector is too small!");
-        cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, K, N, 1.0, &A[offSetA], N, &B[offSetB], K, 0.0,
-                    &out[offSetOut], K);
+    static TensorMeta matmulBroadcast(const TensorMeta& dat1, const TensorMeta& dat2) {
+        std::vector<int> outShape = fetchMatmulSize(dat1, dat2);
+        TensorMeta out(outShape);
+
+        int batchSize = 1;
+        for (int dimIdx = 0; dimIdx < out.ndim() - 2; ++dimIdx) {
+            batchSize *= out.tensorSize[dimIdx];
+        }
+
+        int M = outShape[outShape.size() - 2];
+        int N = outShape[outShape.size() - 1];
+        int K = dat1.tensorSize.back();
+
+        std::vector<int> stride1 = fetchStride(dat1);
+        std::vector<int> stride2 = fetchStride(dat2);
+        std::vector<int> strideOut = fetchStride(out);
+
+        std::vector<int> indices(outShape.size() - 2, 0);
+
+        for (int batchIdx = 0; batchIdx < batchSize; ++batchIdx) {
+            int offSet1 = getMatmulBatchIndex(dat1.tensorSize, stride1, indices);
+            int offSet2 = getMatmulBatchIndex(dat2.tensorSize, stride2, indices);
+            int offSetOut = batchIdx * (M * N);
+
+            matmulAtomic(dat1.rawData, dat2.rawData, out.rawData, offSet1, offSet2, offSetOut, M, K, N);
+
+            // Update indices for broadcasting
+            for (int dim = indices.size() - 1; dim >= 0; --dim) {
+                indices[dim]++;
+                if (indices[dim] < outShape[dim]) {
+                    break;
+                }
+                indices[dim] = 0;
+            }
+        }
+
+        return out;
     }
 
     static TensorMeta matmul(const TensorMeta& dat1, const TensorMeta& dat2) {
-        TensorMeta out(fetchMatmulShape(dat1, dat2));
-        int M = dat1.tensorSize[dat1.tensorSize.size() - 2];
-        int N = dat1.tensorSize[dat1.tensorSize.size() - 1];
-        int P = dat2.tensorSize[dat2.tensorSize.size() - 1];
-        matmulAtomic(dat1.rawData, dat2.rawData, out.rawData, 0, 0, 0, M, N, P);
+        bool matmulFlag = validateMatmul(dat1, dat2);
 
-        return out;
+        if (!matmulFlag)
+            throw std::runtime_error("Inconsistent data dimension, unable to perform matmul!");
+
+        int dim1 = dat1.ndim(), dim2 = dat2.ndim();
+
+        if (dim1 == 1 && dim2 == 1) {
+            // Performing Dot Product
+
+            // A -> (M, ) , B -> (M, )
+            // A -> (1, 1, M), B -> (1, M, 1)
+            TensorMeta dat1Brodcasted = dat1.unsqueeze().unsqueeze();
+            TensorMeta dat2Broadcasted = dat2.unsqueeze(1).unsqueeze();
+
+            // Perform MatMul
+            // Out -> (1, 1, 1)
+            TensorMeta out = matmulBroadcast(dat1Brodcasted, dat2Broadcasted);
+
+            // Out -> (1,)
+            out = out.squeeze(2).squeeze();
+            return out;
+        } else if (dim1 == 2 && dim2 == 2) {
+            // Expanding last dimension to perform batched matmul
+            // A -> (M, K), B -> (K, N)
+            // A -> (1, M, K), B -> (1, K, N)
+            // Out -> (1, M, N)
+            TensorMeta out = matmul(dat1.unsqueeze(), dat2.unsqueeze());
+
+            // Out -> (M, N)
+            return out.squeeze();
+        } else if (dim1 == 1 && dim2 == 2) {
+            // A -> (M, ) , B -> (M, K)
+            // A -> (1, M), B -> (M, K)(unchanged)
+            // Out -> (1, K)
+            TensorMeta out = matmul(dat1.unsqueeze(), dat2);
+
+            // Out -> (K,)
+            return out.squeeze();
+        } else if (dim1 == 2 && dim2 == 1) {
+            // A -> (M, K) , B -> (K, )
+            // A -> (M, K)(unchanged), B -> (K, 1)
+            // Out -> (M, 1)
+            TensorMeta out = matmul(dat1, dat2.unsqueeze(1));
+
+            // Out -> (M,)
+            return out.squeeze(1);
+        } else {
+            if (dim1 == 1) {
+                // A -> (M, ) , B -> (..., M, K)
+                // A -> (1, 1, M)
+                TensorMeta dat1Brodcasted = dat1.unsqueeze().unsqueeze();
+                // Out -> (..., 1, K)
+                TensorMeta out = matmulBroadcast(dat1Brodcasted, dat2);
+                // Out -> (..., K)
+                return out.squeeze(out.ndim() - 2);
+            } else if (dim1 == 2) {
+                // A -> (M, K), B -> (..., K, N)
+                // A -> (1, M, K)
+                TensorMeta dat1Brodcasted = dat1.unsqueeze();
+                // Out -> (..., M, N)
+                return matmulBroadcast(dat1Brodcasted, dat2);
+            } else if (dim2 == 1) {
+                // A -> (..., M, K), B -> (K, )
+                // B -> (1, K, 1)
+                TensorMeta dat2Brodcasted = dat2.unsqueeze(1).unsqueeze();
+                // Out -> (..., M, 1)
+                TensorMeta out = matmulBroadcast(dat1, dat2Brodcasted);
+                // Out -> (..., M)
+                return out.squeeze(out.ndim() - 1);
+            } else if (dim2 == 2) {
+                // A -> (..., M, K), B -> (K, N)
+                // B -> (1, K, N)
+                TensorMeta dat2Brodcasted = dat2.unsqueeze();
+                // Out -> (..., M, N)
+                return matmulBroadcast(dat1, dat2Brodcasted);
+            } else {
+                return matmulBroadcast(dat1, dat2);
+            }
+        }
     }
 };
