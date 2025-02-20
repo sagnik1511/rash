@@ -6,26 +6,27 @@
 #include <string>
 #include <vector>
 
+#include "tensorMeta.hpp"
+
 const char* bool2String(bool val) { return val ? "true" : "false"; }
 
 /*
 This a fairly simple n-dimensional Tensor Class
 which is designed to learn how primitive tensor operations like forward and backward work.
 This class also have autograd functionality like PyTorch (unlike it's efficient performance)
-Oh, btw for now the n in n-dimensional is 1 :)
 */
 class Tensor {
-    double data_, grad = 0.0f;
+    TensorMeta data_, grad;
     std::string tag;
     bool requiresGrad, trainable;
     static int tensorCounter;
-    std::function<void(double, bool)> _backward;
+    std::function<void(TensorMeta, bool)> _backward;
     std::vector<Tensor*> prev;
     std::map<std::string, bool> gradVisited;
 
    public:
     static std::map<std::string, Tensor*> tensors;
-    Tensor(double data, bool requiresGrad = false, std::string tensorTag = "", bool trainable = false)
+    Tensor(TensorMeta data, bool requiresGrad = false, std::string tensorTag = "", bool trainable = false)
         : data_(data), requiresGrad(requiresGrad), trainable(trainable) {
         if (tensorTag == "")
             this->tag = "tensor_" + std::to_string(++tensorCounter);
@@ -34,10 +35,29 @@ class Tensor {
 
         if (tag != "")
             tensors[tag] = this;
+
+        grad = TensorMeta(data);
+        grad.updateAll(0.0);
+    }
+    Tensor(double data, bool requiresGrad = false, std::string tensorTag = "", bool trainable = false)
+        : data_(TensorMeta(data)), requiresGrad(requiresGrad), trainable(trainable) {
+        if (tensorTag == "")
+            this->tag = "tensor_" + std::to_string(++tensorCounter);
+        else
+            this->tag = tensorTag;
+
+        if (tag != "")
+            tensors[tag] = this;
+
+        grad = TensorMeta(data);
+        grad.updateAll(0.0);
     }
 
-    Tensor() : data_(0), requiresGrad(false), tag("") {};
-    ~Tensor() { std::cout << "Destoyed! " << this->tag << std::endl; };
+    Tensor() : data_(TensorMeta()), requiresGrad(false), tag("") {};
+    ~Tensor() {
+        std::cout << "Destoyed! " << this->tag << std::endl;
+        tensors.erase(tag);
+    };
 
     friend std::ostream& operator<<(std::ostream& os, const Tensor& tensor) {
         os << "Tensor(";
@@ -49,23 +69,35 @@ class Tensor {
         return os;
     }
 
+    // This function helps the broadcasted tensor meta2 match dimension with meta1
+    static TensorMeta squeezeSum(const TensorMeta& dat1, const TensorMeta& dat2) {
+        TensorMeta out = dat2;
+        auto [addedDims, bcDims] = TensorMeta::fetchBroadcastedAxes(dat1, dat2);
+        if (bcDims.size())
+            out = out.sum(bcDims);
+        if (addedDims.size())
+            out = out.sum(addedDims, true);
+
+        return out;
+    }
+
     Tensor operator+(Tensor& other) {
         std::string newTag = "(" + tag + "+" + other.tag + ")";
         Tensor out = Tensor(data_ + other.data_, requiresGrad || other.requiresGrad, newTag);
-        out._backward = [this, &other](double incGrad, bool verbose = false) {
+        out._backward = [this, &other](TensorMeta incGrad, bool verbose = false) {
             if (verbose) {
                 std::cout << "Running +Grad on '" << this->tag << "' and '" << other.tag << "'\n";
                 std::cout << "Incoming Gradient : " << incGrad << "\n";
             }
 
             if (this->requiresGrad) {
-                this->grad += 1.0 * incGrad;
+                this->grad += squeezeSum(this->grad, incGrad);
                 if (verbose)
                     std::cout << "Grad Value of " << this->tag << " now : " << this->grad << std::endl;
             }
 
             if (other.requiresGrad) {
-                other.grad += 1.0 * incGrad;
+                other.grad += squeezeSum(other.grad, incGrad);
                 if (verbose)
                     std::cout << "Grad Value of " << other.tag << " now : " << other.grad << std::endl;
             }
@@ -78,14 +110,14 @@ class Tensor {
     Tensor operator-() {
         std::string newTag = "(-" + tag + ")";
         Tensor out = Tensor(-data_, requiresGrad, newTag);
-        out._backward = [this](double incGrad, bool verbose = false) {
+        out._backward = [this](TensorMeta incGrad, bool verbose = false) {
             if (verbose) {
                 std::cout << "Running -Grad on '" << this->tag << "'\n";
                 std::cout << "Incoming Gradient : " << incGrad << "\n";
             }
 
             if (this->requiresGrad) {
-                this->grad += -1.0 * incGrad;
+                this->grad -= squeezeSum(this->grad, incGrad);
                 if (verbose)
                     std::cout << "Grad Value of " << this->tag << " now : " << this->grad << std::endl;
             }
@@ -98,20 +130,20 @@ class Tensor {
     Tensor operator-(Tensor& other) {
         std::string newTag = "(" + tag + "-" + other.tag + ")";
         Tensor out = Tensor(data_ - other.data_, requiresGrad || other.requiresGrad, newTag);
-        out._backward = [this, &other](double incGrad, bool verbose = false) {
+        out._backward = [this, &other](TensorMeta incGrad, bool verbose = false) {
             if (verbose) {
                 std::cout << "Running -Grad on '" << this->tag << "' and '" << other.tag << "'\n";
                 std::cout << "Incoming Gradient : " << incGrad << "\n";
             }
 
             if (this->requiresGrad) {
-                this->grad += 1.0 * incGrad;
+                this->grad += squeezeSum(this->grad, incGrad);
                 if (verbose)
                     std::cout << "Grad Value of " << this->tag << " now : " << this->grad << std::endl;
             }
 
             if (other.requiresGrad) {
-                other.grad += -1.0 * incGrad;
+                other.grad -= squeezeSum(other.grad, incGrad);
                 if (verbose)
                     std::cout << "Grad Value of " << other.tag << " now : " << other.grad << std::endl;
             }
@@ -124,19 +156,19 @@ class Tensor {
     Tensor operator*(Tensor& other) {
         std::string newTag = "(" + tag + "*" + other.tag + ")";
         Tensor out = Tensor(data_ * other.data_, requiresGrad || other.requiresGrad, newTag);
-        out._backward = [this, &other](double incGrad, bool verbose = false) {
+        out._backward = [this, &other](TensorMeta incGrad, bool verbose = false) {
             if (verbose) {
                 std::cout << "Running *Grad on '" << this->tag << "' and '" << other.tag << "'\n";
                 std::cout << "Incoming Gradient : " << incGrad << "\n";
             }
 
             if (this->requiresGrad) {
-                this->grad += other.data_ * incGrad;
+                this->grad += squeezeSum(this->grad, other.data_ * incGrad);
                 if (verbose)
                     std::cout << "Grad Value of " << this->tag << " now : " << this->grad << std::endl;
             }
             if (other.requiresGrad) {
-                other.grad += this->data_ * incGrad;
+                other.grad += squeezeSum(other.grad, this->data_ * incGrad);
                 if (verbose)
                     std::cout << "Grad Value of " << other.tag << " now : " << other.grad << std::endl;
             }
@@ -148,19 +180,19 @@ class Tensor {
     Tensor operator/(Tensor& other) {
         std::string newTag = "(" + tag + "/" + other.tag + ")";
         Tensor out = Tensor(data_ / other.data_, requiresGrad || other.requiresGrad, newTag);
-        out._backward = [this, &other](double incGrad, bool verbose = false) {
+        out._backward = [this, &other](TensorMeta incGrad, bool verbose = false) {
             if (verbose) {
                 std::cout << "Running /Grad on '" << this->tag << "' and '" << other.tag << "'\n";
                 std::cout << "Incoming Gradient : " << incGrad << "\n";
             }
 
             if (this->requiresGrad) {
-                this->grad += (1 / other.data_) * incGrad;
+                this->grad += squeezeSum(this->grad, incGrad / other.data_);
                 if (verbose)
                     std::cout << "Grad Value of " << this->tag << " now : " << this->grad << std::endl;
             }
             if (other.requiresGrad) {
-                other.grad += -(this->data_ / (other.data_ * other.data_)) * incGrad;
+                other.grad -= squeezeSum(other.grad, (this->data_ / (other.data_ * other.data_)) * incGrad);
                 if (verbose)
                     std::cout << "Grad Value of " << other.tag << " now : " << other.grad << std::endl;
             }
@@ -171,9 +203,9 @@ class Tensor {
 
     Tensor exp() {
         std::string newTag = "exp(" + tag + ")";
-        double expVal = std::__math::exp(this->data_);
+        TensorMeta expVal = TensorMeta::exp(this->data_);
         Tensor out = Tensor(expVal, requiresGrad, newTag);
-        out._backward = [this, expVal](double incGrad, bool verbose = false) {
+        out._backward = [this, expVal](TensorMeta incGrad, bool verbose = false) {
             if (verbose) {
                 std::cout << "Running (e^)Grad on '" << this->tag << "'\n";
                 std::cout << "Incoming Gradient : " << incGrad << "\n";
@@ -191,7 +223,7 @@ class Tensor {
 
     void backward(bool isRoot = true, bool verbose = false) {
         if (isRoot) {
-            grad = 1.0;
+            grad.updateAll(1.0);
             gradVisited.clear();
         }
 
@@ -211,14 +243,20 @@ class Tensor {
                     std::cout << this->tag << " is leaf node!" << std::endl;
             }
             for (auto& tensor : prev) {
-                tensor->backward(false);
+                tensor->backward(false, verbose);
             }
         }
     }
 
-    double fetchData() { return data_; }
-    double fetchGrad() { return grad; }
-    void updateData(double value) { this->data_ = value; }
-    void updaetGrad(double value) { this->grad = value; }
+    TensorMeta fetchData() { return data_; }
+    TensorMeta fetchGrad() { return grad; }
+    void updateData(TensorMeta value) { this->data_ = value; }
+    void updaetGrad(TensorMeta value) { this->grad = value; }
+
+    void zeroGrad() { this->grad.updateAll(0.0); }
     void updateTag(std::string newTag) { this->tag = newTag; }
+
+    static Tensor rand(const std::vector<int>& shape, bool requiresGrad = false) {
+        return Tensor(TensorMeta(shape), requiresGrad);
+    }
 };

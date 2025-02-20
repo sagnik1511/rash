@@ -6,6 +6,7 @@
 #include <iostream>
 #include <map>
 #include <random>
+#include <set>
 #include <vector>
 
 // This class is to hold all tensor data
@@ -13,9 +14,9 @@
 class TensorMeta {
     int numel;
     std::vector<int> tensorSize;
-    std::vector<double> rawData;
 
    public:
+    std::vector<double> rawData;
     TensorMeta(std::vector<double> data, std::vector<int> size) : tensorSize(size), rawData(data) {
         numel = 1;
         for (auto& dim : tensorSize) {
@@ -25,6 +26,7 @@ class TensorMeta {
             throw std::runtime_error("Data size mismatch with tensorSize!");
         }
     }
+    TensorMeta(double data) : tensorSize({1}), rawData({data}) { numel = 1; }
 
     TensorMeta(std::vector<int> size) : tensorSize(size) {
         numel = 1;
@@ -35,7 +37,7 @@ class TensorMeta {
         rawData.assign(numel, 0.0);
         fillRandomData();
     }
-
+    TensorMeta() = default;
     ~TensorMeta() = default;
     TensorMeta(const TensorMeta& other) : numel(other.numel), tensorSize(other.tensorSize), rawData(other.rawData) {}
 
@@ -50,13 +52,14 @@ class TensorMeta {
     }
 
     void updateAll(double value) { rawData.assign(numel, value); }
-    void showRecursive(std::ostream& os, std::vector<int> shape, int startIdx = 0) const {
+    static void showRecursive(std::ostream& os, std::vector<int> shape, const std::vector<double>& flattenedData,
+                              int startIdx = 0) {
         if (shape.size() == 1) {
             os << "[";
             for (int i = startIdx; i < startIdx + shape[0] - 1; i++) {
-                os << rawData[i] << " ,";
+                os << flattenedData[i] << " ,";
             }
-            os << rawData[startIdx + shape[0] - 1] << "]";
+            os << flattenedData[startIdx + shape[0] - 1] << "]";
         } else {
             std::vector<int> childShape(shape.begin() + 1, shape.end());
             int totalElPerDim = 1;
@@ -65,17 +68,21 @@ class TensorMeta {
             }
             os << "[";
             for (int i = 0; i < shape[0] - 1; i++) {
-                showRecursive(os, childShape, startIdx + (i * totalElPerDim));
+                showRecursive(os, childShape, flattenedData, startIdx + (i * totalElPerDim));
                 os << ", \n";
             }
-            showRecursive(os, childShape, startIdx + ((shape[0] - 1) * totalElPerDim));
+            showRecursive(os, childShape, flattenedData, startIdx + ((shape[0] - 1) * totalElPerDim));
             os << "]";
         }
     }
 
-    void display() {
-        showRecursive(std::cout, tensorSize, 0);
-        std::cout << std::endl;
+    static void display(std::ostream& oss, const TensorMeta& meta) {
+        showRecursive(oss, meta.tensorSize, meta.rawData, 0);
+    }
+
+    friend std::ostream& operator<<(std::ostream& os, const TensorMeta& meta) {
+        meta.display(os, meta);
+        return os;
     }
 
     TensorMeta squeeze(std::vector<int> dims) const {
@@ -225,14 +232,44 @@ class TensorMeta {
         std::cout << "\n";
     }
 
-    TensorMeta operator+(const TensorMeta& other) {
+    TensorMeta operator+(const TensorMeta& other) const {
         std::function<double(double, double)> op = [](double val1, double val2) { return val1 + val2; };
         return TensorMeta::broadcast(*this, other, op);
     }
 
-    TensorMeta operator-(const TensorMeta& other) {
+    TensorMeta operator+(double other) const {
+        std::function<double(double, double)> op = [](double val1, double val2) { return val1 + val2; };
+        TensorMeta otherMeta = TensorMeta({other}, {1});
+        return TensorMeta::broadcast(*this, otherMeta, op);
+    }
+
+    TensorMeta& operator+=(const TensorMeta& other) {
+        std::function<double(double, double)> op = [](double val1, double val2) { return val1 + val2; };
+        *this = std::move(TensorMeta::broadcast(*this, other, op));
+        return *this;
+    }
+
+    TensorMeta operator-() {
+        TensorMeta other({0}, {1});
+        std::function<double(double, double)> op = [](double val1, double val2) { return val2 - val1; };
+        return TensorMeta::broadcast(*this, other, op);
+    }
+
+    TensorMeta operator-(const TensorMeta& other) const {
         std::function<double(double, double)> op = [](double val1, double val2) { return val1 - val2; };
         return TensorMeta::broadcast(*this, other, op);
+    }
+
+    TensorMeta operator-(double other) const {
+        std::function<double(double, double)> op = [](double val1, double val2) { return val1 - val2; };
+        TensorMeta otherMeta = TensorMeta({other}, {1});
+        return TensorMeta::broadcast(*this, otherMeta, op);
+    }
+
+    TensorMeta& operator-=(const TensorMeta& other) {
+        std::function<double(double, double)> op = [](double val1, double val2) { return val1 - val2; };
+        *this = std::move(TensorMeta::broadcast(*this, other, op));
+        return *this;
     }
 
     // TensorMeta operator*(const TensorMeta& other) {
@@ -245,10 +282,50 @@ class TensorMeta {
         return TensorMeta::broadcast(*this, other, op);
     }
 
-    TensorMeta operator/(const TensorMeta& other) {
+    TensorMeta operator*(double other) const {
+        std::function<double(double, double)> op = [](double val1, double val2) { return val1 * val2; };
+        TensorMeta otherMeta = TensorMeta(other);
+        return TensorMeta::broadcast(*this, otherMeta, op);
+    }
+
+    TensorMeta operator/(const TensorMeta& other) const {
         std::function<double(double, double)> op = [](double val1, double val2) { return val1 / val2; };
         return TensorMeta::broadcast(*this, other, op);
     }
+
+    TensorMeta operator/(double other) const {
+        std::function<double(double, double)> op = [](double val1, double val2) { return val1 / val2; };
+        TensorMeta otherMeta = TensorMeta(other);
+        return TensorMeta::broadcast(*this, otherMeta, op);
+    }
+
+    static TensorMeta exp(const TensorMeta& meta) {
+        TensorMeta other(1);
+        std::function<double(double, double)> op = [](double val1, double val2) { return std::exp(val1); };
+        return TensorMeta::broadcast(meta, other, op);
+    }
+
+    static TensorMeta abs(const TensorMeta& meta) {
+        TensorMeta other(1);
+        std::function<double(double, double)> op = [](double val1, double val2) { return std::abs(val1); };
+        return TensorMeta::broadcast(meta, other, op);
+    }
+
+    operator double() const {
+        if (ndim() == 1 && tensorSize[0] == 1) {
+            return rawData[0];
+        } else {
+            throw std::runtime_error("Higher Dimensional data can't be converted to Scalar-type");
+        }
+    }
+
+    // static std::vector<int> fetchMatmulSize(const TensorMeta& dat1, const TensorMeta& dat2) {
+    //     return fetchMatmulSize(dat1.tensorSize, dat2.tensorSize);
+    // }
+
+    // static std::vector<int> fetchMatMulSize(const std::vector<int> sz1, const std::vector<int> sz2) {
+    //     assert(sz1.size() >= 2 && sz2.size() >= 2 && "MatMul Operation needs atleast 2 dimensions!");
+    // }
 
     static bool validateMatmul(const TensorMeta& dat1, const TensorMeta& dat2) {
         std::vector<int> v1, v2;
@@ -295,6 +372,7 @@ class TensorMeta {
         }
     }
 
+    // TODO:Update for broadcasting and all edge cases
     static std::vector<int> fetchMatmulSize(const TensorMeta& dat1, const TensorMeta& dat2) {
         bool execFlag = validateMatmul(dat1, dat2);
         if (!execFlag) {
@@ -341,6 +419,7 @@ class TensorMeta {
                                    const std::vector<int>& indices) {
         int offSet = 0;
         int dimShift = indices.size() - shape.size() + 2;
+        // for(int idx=0;idx<shape.size()-2;++idx)
         for (int idx = 0; idx < shape.size() - 2; ++idx) {
             offSet += (shape[idx] == 1) ? 0 : indices[idx + dimShift] * stride[idx];
         }
@@ -370,6 +449,11 @@ class TensorMeta {
             int offSet1 = getMatmulBatchIndex(dat1.tensorSize, stride1, indices);
             int offSet2 = getMatmulBatchIndex(dat2.tensorSize, stride2, indices);
             int offSetOut = batchIdx * (M * N);
+            // std::cout << "Iteration : " << batchIdx << "\n--------------\n";
+            // std::cout << "OffSet1 : " << offSet1 << std::endl;
+            // std::cout << "OffSet2 : " << offSet2 << std::endl;
+            // std::cout << "OffSetOut : " << offSetOut << std::endl;
+            // std::cout << "--------------\n";
 
             matmulAtomic(dat1.rawData, dat2.rawData, out.rawData, offSet1, offSet2, offSetOut, M, K, N);
 
@@ -467,5 +551,81 @@ class TensorMeta {
                 return matmulBroadcast(dat1, dat2);
             }
         }
+    }
+
+    std::vector<int> fetchSqueezedShape(const std::vector<int>& origShape, std::vector<int> axis = {},
+                                        bool keepdims = false) {
+        if (!axis.size()) {
+            return {1};
+        }
+        std::set<int> axes(axis.begin(), axis.end());
+        std::vector<int> finShape(origShape.begin(), origShape.end());
+        std::set<int>::reverse_iterator it;
+        for (it = axes.rbegin(); it != axes.rend(); ++it) {
+            int dim = *it;
+            if (dim < ndim() && dim >= 0) {
+                if (keepdims) {
+                    finShape[dim] = 1;
+                } else {
+                    finShape.erase(finShape.begin() + dim);
+                }
+            }
+        }
+        return finShape;
+    }
+
+    void squeezedSumAtomic(const std::vector<int>& indices, const std::vector<double>& baseMeta,
+                           std::vector<double>& outMeta, const std::vector<int>& baseShape,
+                           const std::vector<int>& baseStride, const std::vector<int>& outShape,
+                           const std::vector<int>& outStride, const std::vector<int>& axis, bool keepdims = false) {
+        // Fetch output indices
+        std::vector<int> outIndices = indices;
+        if (!keepdims)
+            outIndices = fetchSqueezedShape(indices, axis);
+
+        // Find actual indices in flattened data
+        int baseIdx = getIndex(indices, baseShape, baseStride);
+        int outIdx = getIndex(outIndices, outShape, outStride);
+
+        // std::cout << baseIdx << " + " << outIdx << "\n";
+        //  In place Sum Operation
+        outMeta[outIdx] += baseMeta[baseIdx];
+    }
+
+    TensorMeta sum(std::vector<int> axis = {}, bool keepdims = false) {
+        TensorMeta out(fetchSqueezedShape(tensorSize, axis, keepdims));
+        out.updateAll(0.0);
+        std::vector<int> indices(ndim(), 0);
+        std::vector<int> stride = fetchStride(tensorSize);
+        std::vector<int> outStride = fetchStride(out.tensorSize);
+
+        for (int b = 0; b < numel; ++b) {
+            squeezedSumAtomic(indices, rawData, out.rawData, tensorSize, stride, out.tensorSize, outStride, axis,
+                              keepdims);
+            for (int dim = indices.size() - 1; dim >= 0; --dim) {
+                indices[dim]++;
+                if (indices[dim] < tensorSize[dim]) {
+                    break;
+                }
+                indices[dim] = 0;
+            }
+        }
+
+        return out;
+    }
+
+    static std::pair<std::vector<int>, std::vector<int>> fetchBroadcastedAxes(const TensorMeta& base,
+                                                                              const TensorMeta& broadcasted) {
+        std::vector<int> axes;
+        std::vector<int> addedDims;
+        int shift = broadcasted.ndim() - base.ndim();
+        for (int i = 0; i < shift; ++i) addedDims.push_back(i);
+        for (int i = 0; i < base.ndim(); ++i) {
+            if (base.tensorSize[i] != broadcasted.tensorSize[i + shift]) {
+                axes.push_back(i + shift);
+            }
+        }
+
+        return {axes, addedDims};
     }
 };
