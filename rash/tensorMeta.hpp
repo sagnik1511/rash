@@ -9,14 +9,24 @@
 #include <set>
 #include <vector>
 
-// This class is to hold all tensor data
-// and it's different orientations/views
+#include "utils.hpp"
+
+/**
+ * @class TensorMeta
+ * @brief A class to represent tensor data with various operations and transformations.
+ */
 class TensorMeta {
     int numel;
     std::vector<int> tensorSize;
 
    public:
     std::vector<double> rawData;
+    /**
+     * @brief Constructs a TensorMeta object with given data and shape.
+     * @param data The raw data.
+     * @param size The shape of the tensor.
+     * @throws std::runtime_error if the data size does not match the tensor shape.
+     */
     TensorMeta(std::vector<double> data, std::vector<int> size) : tensorSize(size), rawData(data) {
         numel = 1;
         for (auto& dim : tensorSize) {
@@ -26,8 +36,17 @@ class TensorMeta {
             throw std::runtime_error("Data size mismatch with tensorSize!");
         }
     }
+
+    /**
+     * @brief Constructs a scalar TensorMeta object.
+     * @param data The scalar value.
+     */
     TensorMeta(double data) : tensorSize({1}), rawData({data}) { numel = 1; }
 
+    /**
+     * @brief Constructs a TensorMeta object with a given shape and initializes it with random values.
+     * @param size The shape of the tensor.
+     */
     TensorMeta(std::vector<int> size) : tensorSize(size) {
         numel = 1;
 
@@ -41,6 +60,9 @@ class TensorMeta {
     ~TensorMeta() = default;
     TensorMeta(const TensorMeta& other) : numel(other.numel), tensorSize(other.tensorSize), rawData(other.rawData) {}
 
+    /**
+     * @brief Fills the tensor with random values between 0 and 1.
+     */
     void fillRandomData() {
         std::random_device rd;
         std::mt19937 gen(rd());
@@ -51,7 +73,17 @@ class TensorMeta {
         }
     }
 
+    /**
+     * @brief Updates all tensor elements to a specified value.
+     * @param value The new value for all elements.
+     */
     void updateAll(double value) { rawData.assign(numel, value); }
+
+    /**
+     * @brief Displays the tensor in a formatted manner.
+     * @param oss The output stream.
+     * @param meta The tensor to be displayed.
+     */
     static void showRecursive(std::ostream& os, std::vector<int> shape, const std::vector<double>& flattenedData,
                               int startIdx = 0) {
         if (shape.size() == 1) {
@@ -85,6 +117,11 @@ class TensorMeta {
         return os;
     }
 
+    /**
+     * @brief Removes singleton dimensions from the tensor.
+     * @param dims The dimensions to be squeezed.
+     * @return A new TensorMeta object with squeezed dimensions.
+     */
     TensorMeta squeeze(std::vector<int> dims) const {
         std::vector<int> newSize(tensorSize);
         std::sort(dims.begin(), dims.end(), std::greater<>());
@@ -96,35 +133,34 @@ class TensorMeta {
         return TensorMeta(rawData, newSize);
     }
 
+    /**
+     * @brief Removes a singleton dimension.
+     * @param dim The dimension to be squeezed.
+     * @return A new TensorMeta object.
+     */
     TensorMeta squeeze(int dim = 0) const {
         std::vector<int> dims = {dim};
         return squeeze(dims);
     }
 
+    /**
+     * @brief Expands the tensor by inserting a singleton dimension.
+     * @param dim The position of the new dimension.
+     * @return A new TensorMeta object.
+     */
     TensorMeta unsqueeze(int dim = 0) const {
         std::vector<int> newSize(tensorSize);
         newSize.insert(newSize.begin() + dim, 1);
         return TensorMeta(rawData, newSize);
     }
 
-    TensorMeta permute(std::vector<int> dims) const {
-        int n = ndim();
-        assert(dims.size() == ndim() && "Dim Size not matching");
-        std::vector<int> newDims;
-        std::map<int, int> dimUpdate;
-        for (auto& dim : dims) {
-            if (!dimUpdate[dim] && dim < n) {
-                dimUpdate[dim] = tensorSize[dim];
-            } else {
-                throw std::runtime_error("Failed due to inconsistent dims");
-            }
-        }
-        for (auto& dim : dims) {
-            newDims.push_back(tensorSize[dim]);
-        }
-        return TensorMeta(rawData, newDims);
-    }
-
+    /**
+     * @brief Computes the broadcasted shape for two tensors.
+     * @param sz1 The shape of the first tensor.
+     * @param sz2 The shape of the second tensor.
+     * @return The broadcasted shape.
+     * @throws std::length_error if broadcasting is not possible.
+     */
     static std::vector<int> fetchBroadcastedSize(const std::vector<int>& sz1, const std::vector<int>& sz2) {
         if (!sz1.size() || !sz2.size()) {
             throw std::length_error("Tensor should have atleats a dimension!");
@@ -180,6 +216,13 @@ class TensorMeta {
         return stride;
     }
 
+    /**
+     * @brief Computes the flat index for given indices in a tensor with a given shape and stride.
+     * @param indices The indices in multi-dimensional space.
+     * @param shape The shape of the tensor.
+     * @param stride The stride of the tensor.
+     * @return The computed flat index.
+     */
     static int getIndex(const std::vector<int>& indices, const std::vector<int>& shape,
                         const std::vector<int>& stride) {
         int idx = 0;
@@ -191,6 +234,17 @@ class TensorMeta {
         return idx;
     }
 
+    /**
+     * @brief Applies an element-wise operation with broadcasting.
+     * @param dat1 The first tensor.
+     * @param dat2 The second tensor.
+     * @param stride1 The stride of the first tensor.
+     * @param stride2 The stride of the second tensor.
+     * @param output The result tensor.
+     * @param indices Temporary indices for recursion.
+     * @param dim The current dimension being processed.
+     * @param operation The element-wise operation function.
+     */
     static void iterateBroadcasting(const TensorMeta& dat1, const TensorMeta& dat2, const std::vector<int>& stride1,
                                     const std::vector<int>& stride2, TensorMeta& output, std::vector<int>& indices,
                                     int dim, const std::function<double(double, double)>& operation) {
@@ -209,6 +263,13 @@ class TensorMeta {
         }
     }
 
+    /**
+     * @brief Performs element-wise broadcasting operation on two tensors.
+     * @param dat1 The first tensor.
+     * @param dat2 The second tensor.
+     * @param op The operation function.
+     * @return The resulting tensor after applying the operation.
+     */
     static TensorMeta broadcast(const TensorMeta& dat1, const TensorMeta& dat2,
                                 std::function<double(double, double)> op) {
         std::vector<int> broadcastedShape = fetchBroadcastedSize(dat1, dat2);
@@ -222,8 +283,15 @@ class TensorMeta {
         return broadcastedMetaStorage;
     }
 
+    /**
+     * @brief Returns the number of dimensions of the tensor.
+     * @return The number of dimensions.
+     */
     int ndim() const { return tensorSize.size(); }
 
+    /**
+     * @brief Prints the shape of the tensor.
+     */
     void shape() {
         std::cout << "Shape : ";
         for (auto& el : tensorSize) {
@@ -299,18 +367,33 @@ class TensorMeta {
         return TensorMeta::broadcast(*this, otherMeta, op);
     }
 
+    /**
+     * @brief Computes the element-wise exponential of the tensor.
+     * @param meta The input tensor.
+     * @return A tensor with exponentiated values.
+     */
     static TensorMeta exp(const TensorMeta& meta) {
         TensorMeta other(1);
         std::function<double(double, double)> op = [](double val1, double val2) { return std::exp(val1); };
         return TensorMeta::broadcast(meta, other, op);
     }
 
+    /**
+     * @brief Computes the element-wise absolute value of the tensor.
+     * @param meta The input tensor.
+     * @return A tensor with absolute values.
+     */
     static TensorMeta abs(const TensorMeta& meta) {
         TensorMeta other(1);
         std::function<double(double, double)> op = [](double val1, double val2) { return std::abs(val1); };
         return TensorMeta::broadcast(meta, other, op);
     }
 
+    /**
+     * @brief Converts a scalar tensor to a double.
+     * @return The scalar value.
+     * @throws std::runtime_error if the tensor is not a scalar.
+     */
     operator double() const {
         if (ndim() == 1 && tensorSize[0] == 1) {
             return rawData[0];
@@ -327,6 +410,12 @@ class TensorMeta {
     //     assert(sz1.size() >= 2 && sz2.size() >= 2 && "MatMul Operation needs atleast 2 dimensions!");
     // }
 
+    /**
+     * @brief Validates if two tensors can be multiplied using matrix multiplication.
+     * @param dat1 The first tensor.
+     * @param dat2 The second tensor.
+     * @return True if matrix multiplication is valid, false otherwise.
+     */
     static bool validateMatmul(const TensorMeta& dat1, const TensorMeta& dat2) {
         std::vector<int> v1, v2;
         int dim1 = dat1.ndim(), dim2 = dat2.ndim();
@@ -372,7 +461,13 @@ class TensorMeta {
         }
     }
 
-    // TODO:Update for broadcasting and all edge cases
+    /**
+     * @brief Computes the output shape for matrix multiplication, considering broadcasting rules.
+     * @param dat1 First tensor metadata.
+     * @param dat2 Second tensor metadata.
+     * @return The shape of the resulting matrix after matmul.
+     * @throws std::runtime_error If shapes are incompatible for matrix multiplication.
+     */
     static std::vector<int> fetchMatmulSize(const TensorMeta& dat1, const TensorMeta& dat2) {
         bool execFlag = validateMatmul(dat1, dat2);
         if (!execFlag) {
@@ -403,6 +498,18 @@ class TensorMeta {
         return matmulSize;
     }
 
+    /**
+     * @brief Performs atomic matrix multiplication using BLAS (cblas_dgemm).
+     * @param A First matrix (flattened vector).
+     * @param B Second matrix (flattened vector).
+     * @param out Output matrix (flattened vector).
+     * @param offSetA Offset in A.
+     * @param offSetB Offset in B.
+     * @param offSetOut Offset in output matrix.
+     * @param M Number of rows in A and output matrix.
+     * @param K Number of columns in A and rows in B.
+     * @param N Number of columns in B and output matrix.
+     */
     static void matmulAtomic(const std::vector<double>& A, const std::vector<double>& B, std::vector<double>& out,
                              int offSetA, int offSetB, int offSetOut, int M, int K, int N) {
         // A ->   M x K
@@ -415,6 +522,13 @@ class TensorMeta {
                     &out[offSetOut], N);
     }
 
+    /**
+     * @brief Computes the batch index offset for a given batch shape and strides.
+     * @param shape Shape of the tensor.
+     * @param stride Stride of the tensor.
+     * @param indices Batch indices to compute offset.
+     * @return The computed offset for the batch index.
+     */
     static int getMatmulBatchIndex(const std::vector<int>& shape, const std::vector<int>& stride,
                                    const std::vector<int>& indices) {
         int offSet = 0;
@@ -426,6 +540,12 @@ class TensorMeta {
         return offSet;
     }
 
+    /**
+     * @brief Performs batched matrix multiplication with broadcasting.
+     * @param dat1 First tensor metadata.
+     * @param dat2 Second tensor metadata.
+     * @return The metadata of the resulting tensor after batched matrix multiplication.
+     */
     static TensorMeta matmulBroadcast(const TensorMeta& dat1, const TensorMeta& dat2) {
         std::vector<int> outShape = fetchMatmulSize(dat1, dat2);
         TensorMeta out(outShape);
@@ -470,6 +590,13 @@ class TensorMeta {
         return out;
     }
 
+    /**
+     * @brief Computes the matrix multiplication of two tensors with broadcasting support.
+     * @param dat1 First tensor metadata.
+     * @param dat2 Second tensor metadata.
+     * @return The resulting tensor metadata after matrix multiplication.
+     * @throws std::runtime_error If matrix dimensions are inconsistent.
+     */
     static TensorMeta matmul(const TensorMeta& dat1, const TensorMeta& dat2) {
         bool matmulFlag = validateMatmul(dat1, dat2);
 
@@ -553,6 +680,13 @@ class TensorMeta {
         }
     }
 
+    /**
+     * @brief Computes the output shape after squeezing a tensor along given axes.
+     * @param origShape Original shape of the tensor.
+     * @param axis Axes along which to squeeze (optional).
+     * @param keepdims If true, keeps dimensions as 1 instead of removing them.
+     * @return The squeezed shape of the tensor.
+     */
     std::vector<int> fetchSqueezedShape(const std::vector<int>& origShape, std::vector<int> axis = {},
                                         bool keepdims = false) {
         if (!axis.size()) {
@@ -574,6 +708,18 @@ class TensorMeta {
         return finShape;
     }
 
+    /**
+     * @brief Performs atomic summation while considering squeezed dimensions.
+     * @param indices Indices of the base tensor.
+     * @param baseMeta Input tensor data.
+     * @param outMeta Output tensor data.
+     * @param baseShape Shape of the input tensor.
+     * @param baseStride Stride of the input tensor.
+     * @param outShape Shape of the output tensor.
+     * @param outStride Stride of the output tensor.
+     * @param axis Axes along which to sum.
+     * @param keepdims If true, retains reduced dimensions as size 1.
+     */
     void squeezedSumAtomic(const std::vector<int>& indices, const std::vector<double>& baseMeta,
                            std::vector<double>& outMeta, const std::vector<int>& baseShape,
                            const std::vector<int>& baseStride, const std::vector<int>& outShape,
@@ -592,6 +738,12 @@ class TensorMeta {
         outMeta[outIdx] += baseMeta[baseIdx];
     }
 
+    /**
+     * @brief Computes the sum of the tensor along specified axes.
+     * @param axis Axes along which to sum (optional).
+     * @param keepdims If true, keeps dimensions as size 1.
+     * @return The resulting tensor metadata after summation.
+     */
     TensorMeta sum(std::vector<int> axis = {}, bool keepdims = false) {
         TensorMeta out(fetchSqueezedShape(tensorSize, axis, keepdims));
         out.updateAll(0.0);
@@ -614,6 +766,12 @@ class TensorMeta {
         return out;
     }
 
+    /**
+     * @brief Determines the broadcasted axes when expanding one tensor to match another.
+     * @param base Original tensor metadata.
+     * @param broadcasted Expanded tensor metadata.
+     * @return A pair containing axes to broadcast and added dimensions.
+     */
     static std::pair<std::vector<int>, std::vector<int>> fetchBroadcastedAxes(const TensorMeta& base,
                                                                               const TensorMeta& broadcasted) {
         std::vector<int> axes;
@@ -627,5 +785,79 @@ class TensorMeta {
         }
 
         return {axes, addedDims};
+    }
+
+    /**
+     * @brief Rearranges the dimensions of the tensor according to a given permutation.
+     * @param perm The permutation order.
+     * @return The permuted tensor metadata.
+     * @throws std::runtime_error If permutation size does not match tensor dimensions.
+     */
+    TensorMeta permute(std::vector<int> perm) const {
+        int n = ndim();
+        assert(perm.size() == n && "Permutation Size Should Match with Original TensorMeta Size!");
+        std::vector<int> indices(n, 0);
+        std::vector<int> newShape(n, 0);
+        std::vector<double> rawDataCopy(numel, -1);
+        for (int dim = 0; dim < newShape.size(); dim++) {
+            newShape[dim] = tensorSize[perm[dim]];
+        }
+
+        std::vector<int> stride = fetchStride(tensorSize);
+        std::vector<int> newStride = fetchStride(newShape);
+
+        for (int ix = 0; ix < numel; ++ix) {
+            // printVec(indices);
+
+            std::vector<int> newIndices(n, -1);
+
+            // Fetch new multi indices
+            for (int dim = 0; dim < newShape.size(); dim++) {
+                newIndices[dim] = indices[perm[dim]];
+            }
+            // Prepare flattened index and assign to new memory chunk
+            int newIndex = getIndex(newIndices, newShape, newStride);
+            rawDataCopy[newIndex] = rawData[ix];
+
+            for (int dim = n - 1; dim >= 0; dim--) {
+                indices[dim]++;
+                if (indices[dim] < tensorSize[dim]) {
+                    break;
+                }
+                indices[dim] = 0;
+            }
+        }
+
+        return TensorMeta(rawDataCopy, newShape);
+    }
+
+    /**
+     * @brief Transposes two dimensions of the tensor.
+     * @param dim1 First dimension to swap (default: -1, last dimension).
+     * @param dim2 Second dimension to swap (default: -2, second last dimension).
+     * @return The transposed tensor metadata.
+     */
+    TensorMeta transpose(int dim1 = -1, int dim2 = -2) {
+        std::vector<int> perm = arange(0, ndim());
+        // printVec(perm);
+        if (dim1 < 0)
+            dim1 = ndim() + dim1;
+        if (dim2 < 0)
+            dim2 = ndim() + dim2;
+
+        std::iter_swap(perm.begin() + dim1, perm.begin() + dim2);
+
+        return permute(perm);
+    }
+
+    /**
+     * @brief Returns the transposed version of the tensor by reversing all dimensions.
+     * @return The transposed tensor metadata.
+     */
+    TensorMeta T() {
+        std::vector<int> perm = arange(0, ndim());
+        std::reverse(perm.begin(), perm.end());
+
+        return permute(perm);
     }
 };
