@@ -1,3 +1,4 @@
+#pragma once
 #include <cblas.h>
 
 #include <algorithm>
@@ -11,6 +12,10 @@
 
 #include "utils.hpp"
 
+#define DOUBLE_MAX std::numeric_limits<double>::infinity()
+
+namespace rash {
+
 /**
  * @class TensorMeta
  * @brief A class to represent tensor data with various operations and transformations.
@@ -21,6 +26,8 @@ class TensorMeta {
 
    public:
     std::vector<double> rawData;
+
+#pragma region DataDefinition
     /**
      * @brief Constructs a TensorMeta object with given data and shape.
      * @param data The raw data.
@@ -117,6 +124,8 @@ class TensorMeta {
         return os;
     }
 
+#pragma endregion
+
     /**
      * @brief Removes singleton dimensions from the tensor.
      * @param dims The dimensions to be squeezed.
@@ -209,7 +218,6 @@ class TensorMeta {
         std::vector<int> stride(shape.size(), 0);
         for (int idx = shape.size() - 1; idx >= 0; idx--) {
             stride[idx] = currDimStride;
-            // std::cout << stride[idx] << std::endl;
             currDimStride *= shape[idx];
         }
 
@@ -226,41 +234,13 @@ class TensorMeta {
     static int getIndex(const std::vector<int>& indices, const std::vector<int>& shape,
                         const std::vector<int>& stride) {
         int idx = 0;
-        int dimOffset = shape.size() - indices.size();
-        for (size_t i = 0; i < indices.size(); ++i) {
-            int effIdx = (shape[i + dimOffset] == 1) ? 0 : indices[i];
-            idx += effIdx * stride[i + dimOffset];
+        int dimOffset = indices.size() - shape.size();
+
+        for (size_t i = 0; i < shape.size(); ++i) {
+            idx += (shape[i] == 1) ? 0 : indices[i + dimOffset] * stride[i];
         }
+
         return idx;
-    }
-
-    /**
-     * @brief Applies an element-wise operation with broadcasting.
-     * @param dat1 The first tensor.
-     * @param dat2 The second tensor.
-     * @param stride1 The stride of the first tensor.
-     * @param stride2 The stride of the second tensor.
-     * @param output The result tensor.
-     * @param indices Temporary indices for recursion.
-     * @param dim The current dimension being processed.
-     * @param operation The element-wise operation function.
-     */
-    static void iterateBroadcasting(const TensorMeta& dat1, const TensorMeta& dat2, const std::vector<int>& stride1,
-                                    const std::vector<int>& stride2, TensorMeta& output, std::vector<int>& indices,
-                                    int dim, const std::function<double(double, double)>& operation) {
-        if (dim == output.tensorSize.size()) {
-            int idx1, idx2, finIdx;
-            idx1 = getIndex(indices, dat1.tensorSize, stride1);
-            idx2 = getIndex(indices, dat2.tensorSize, stride2);
-            finIdx = getIndex(indices, output.tensorSize, fetchStride(output));
-
-            output.rawData[finIdx] = operation(dat1.rawData[idx1], dat2.rawData[idx2]);
-            return;
-        }
-        for (int iter = 0; iter < output.tensorSize[dim]; iter++) {
-            indices[dim] = iter;
-            iterateBroadcasting(dat1, dat2, stride1, stride2, output, indices, dim + 1, operation);
-        }
     }
 
     /**
@@ -272,16 +252,34 @@ class TensorMeta {
      */
     static TensorMeta broadcast(const TensorMeta& dat1, const TensorMeta& dat2,
                                 std::function<double(double, double)> op) {
-        std::vector<int> broadcastedShape = fetchBroadcastedSize(dat1, dat2);
-        std::vector<int> stride1, stride2, indices;
-        stride1 = fetchStride(dat1);
-        stride2 = fetchStride(dat2);
-        indices.assign(broadcastedShape.size(), 0);
-        TensorMeta broadcastedMetaStorage(broadcastedShape);
-        iterateBroadcasting(dat1, dat2, stride1, stride2, broadcastedMetaStorage, indices, 0, op);
+        TensorMeta out(fetchBroadcastedSize(dat1, dat2));
 
-        return broadcastedMetaStorage;
+        std::vector<int> indices(out.ndim(), 0);
+
+        std::vector<int> stride1 = fetchStride(dat1);
+        std::vector<int> stride2 = fetchStride(dat2);
+        std::vector<int> strideOut = fetchStride(out);
+
+        for (int idx = 0; idx < out.numel; ++idx) {
+            int idx1 = getIndex(indices, dat1.tensorSize, stride1);
+            int idx2 = getIndex(indices, dat2.tensorSize, stride2);
+
+            out.rawData[idx] = op(dat1.rawData[idx1], dat2.rawData[idx2]);
+
+            // Update indices for broadcasting
+            for (int dim = indices.size() - 1; dim >= 0; --dim) {
+                indices[dim]++;
+                if (indices[dim] < out.tensorSize[dim]) {
+                    break;
+                }
+                indices[dim] = 0;
+            }
+        }
+
+        return out;
     }
+
+#pragma region ArithMaticOperators
 
     /**
      * @brief Returns the number of dimensions of the tensor.
@@ -290,15 +288,10 @@ class TensorMeta {
     int ndim() const { return tensorSize.size(); }
 
     /**
-     * @brief Prints the shape of the tensor.
+     * @brief Returns the shape of the tensor.
+     * @return The shape of the tensor.
      */
-    void shape() {
-        std::cout << "Shape : ";
-        for (auto& el : tensorSize) {
-            std::cout << el << ", ";
-        }
-        std::cout << "\n";
-    }
+    std::vector<int> shape() { return tensorSize; }
 
     TensorMeta operator+(const TensorMeta& other) const {
         std::function<double(double, double)> op = [](double val1, double val2) { return val1 + val2; };
@@ -340,11 +333,6 @@ class TensorMeta {
         return *this;
     }
 
-    // TensorMeta operator*(const TensorMeta& other) {
-    //     std::function<double(double, double)> op = [](double val1, double val2) { return val1 * val2; };
-    //     return TensorMeta::broadcast(*this, other, op);
-    // }
-
     TensorMeta operator*(const TensorMeta& other) const {
         std::function<double(double, double)> op = [](double val1, double val2) { return val1 * val2; };
         return TensorMeta::broadcast(*this, other, op);
@@ -363,6 +351,50 @@ class TensorMeta {
 
     TensorMeta operator/(double other) const {
         std::function<double(double, double)> op = [](double val1, double val2) { return val1 / val2; };
+        TensorMeta otherMeta = TensorMeta(other);
+        return TensorMeta::broadcast(*this, otherMeta, op);
+    }
+
+    TensorMeta operator>(const TensorMeta& other) const {
+        std::function<double(double, double)> op = [](double val1, double val2) { return val1 > val2; };
+        return TensorMeta::broadcast(*this, other, op);
+    }
+
+    TensorMeta operator>(double other) const {
+        std::function<double(double, double)> op = [](double val1, double val2) { return val1 > val2; };
+        TensorMeta otherMeta = TensorMeta(other);
+        return TensorMeta::broadcast(*this, otherMeta, op);
+    }
+
+    TensorMeta operator>=(const TensorMeta& other) const {
+        std::function<double(double, double)> op = [](double val1, double val2) { return val1 >= val2; };
+        return TensorMeta::broadcast(*this, other, op);
+    }
+
+    TensorMeta operator>=(double other) const {
+        std::function<double(double, double)> op = [](double val1, double val2) { return val1 >= val2; };
+        TensorMeta otherMeta = TensorMeta(other);
+        return TensorMeta::broadcast(*this, otherMeta, op);
+    }
+
+    TensorMeta operator<(const TensorMeta& other) const {
+        std::function<double(double, double)> op = [](double val1, double val2) { return val1 < val2; };
+        return TensorMeta::broadcast(*this, other, op);
+    }
+
+    TensorMeta operator<(double other) const {
+        std::function<double(double, double)> op = [](double val1, double val2) { return val1 < val2; };
+        TensorMeta otherMeta = TensorMeta(other);
+        return TensorMeta::broadcast(*this, otherMeta, op);
+    }
+
+    TensorMeta operator<=(const TensorMeta& other) const {
+        std::function<double(double, double)> op = [](double val1, double val2) { return val1 <= val2; };
+        return TensorMeta::broadcast(*this, other, op);
+    }
+
+    TensorMeta operator<=(double other) const {
+        std::function<double(double, double)> op = [](double val1, double val2) { return val1 <= val2; };
         TensorMeta otherMeta = TensorMeta(other);
         return TensorMeta::broadcast(*this, otherMeta, op);
     }
@@ -402,14 +434,9 @@ class TensorMeta {
         }
     }
 
-    // static std::vector<int> fetchMatmulSize(const TensorMeta& dat1, const TensorMeta& dat2) {
-    //     return fetchMatmulSize(dat1.tensorSize, dat2.tensorSize);
-    // }
+#pragma endregion
 
-    // static std::vector<int> fetchMatMulSize(const std::vector<int> sz1, const std::vector<int> sz2) {
-    //     assert(sz1.size() >= 2 && sz2.size() >= 2 && "MatMul Operation needs atleast 2 dimensions!");
-    // }
-
+#pragma region MatMul
     /**
      * @brief Validates if two tensors can be multiplied using matrix multiplication.
      * @param dat1 The first tensor.
@@ -569,11 +596,6 @@ class TensorMeta {
             int offSet1 = getMatmulBatchIndex(dat1.tensorSize, stride1, indices);
             int offSet2 = getMatmulBatchIndex(dat2.tensorSize, stride2, indices);
             int offSetOut = batchIdx * (M * N);
-            // std::cout << "Iteration : " << batchIdx << "\n--------------\n";
-            // std::cout << "OffSet1 : " << offSet1 << std::endl;
-            // std::cout << "OffSet2 : " << offSet2 << std::endl;
-            // std::cout << "OffSetOut : " << offSetOut << std::endl;
-            // std::cout << "--------------\n";
 
             matmulAtomic(dat1.rawData, dat2.rawData, out.rawData, offSet1, offSet2, offSetOut, M, K, N);
 
@@ -680,6 +702,9 @@ class TensorMeta {
         }
     }
 
+#pragma endregion MatMul
+
+#pragma region Reduce
     /**
      * @brief Computes the output shape after squeezing a tensor along given axes.
      * @param origShape Original shape of the tensor.
@@ -687,8 +712,8 @@ class TensorMeta {
      * @param keepdims If true, keeps dimensions as 1 instead of removing them.
      * @return The squeezed shape of the tensor.
      */
-    std::vector<int> fetchSqueezedShape(const std::vector<int>& origShape, std::vector<int> axis = {},
-                                        bool keepdims = false) {
+    static std::vector<int> fetchSqueezedShape(const std::vector<int>& origShape, std::vector<int> axis = {},
+                                               bool keepdims = false) {
         if (!axis.size()) {
             return {1};
         }
@@ -697,7 +722,7 @@ class TensorMeta {
         std::set<int>::reverse_iterator it;
         for (it = axes.rbegin(); it != axes.rend(); ++it) {
             int dim = *it;
-            if (dim < ndim() && dim >= 0) {
+            if (dim < origShape.size() && dim >= 0) {
                 if (keepdims) {
                     finShape[dim] = 1;
                 } else {
@@ -733,37 +758,8 @@ class TensorMeta {
         int baseIdx = getIndex(indices, baseShape, baseStride);
         int outIdx = getIndex(outIndices, outShape, outStride);
 
-        // std::cout << baseIdx << " + " << outIdx << "\n";
         //  In place Sum Operation
         outMeta[outIdx] += baseMeta[baseIdx];
-    }
-
-    /**
-     * @brief Computes the sum of the tensor along specified axes.
-     * @param axis Axes along which to sum (optional).
-     * @param keepdims If true, keeps dimensions as size 1.
-     * @return The resulting tensor metadata after summation.
-     */
-    TensorMeta sum(std::vector<int> axis = {}, bool keepdims = false) {
-        TensorMeta out(fetchSqueezedShape(tensorSize, axis, keepdims));
-        out.updateAll(0.0);
-        std::vector<int> indices(ndim(), 0);
-        std::vector<int> stride = fetchStride(tensorSize);
-        std::vector<int> outStride = fetchStride(out.tensorSize);
-
-        for (int b = 0; b < numel; ++b) {
-            squeezedSumAtomic(indices, rawData, out.rawData, tensorSize, stride, out.tensorSize, outStride, axis,
-                              keepdims);
-            for (int dim = indices.size() - 1; dim >= 0; --dim) {
-                indices[dim]++;
-                if (indices[dim] < tensorSize[dim]) {
-                    break;
-                }
-                indices[dim] = 0;
-            }
-        }
-
-        return out;
     }
 
     /**
@@ -788,6 +784,126 @@ class TensorMeta {
     }
 
     /**
+     * @brief Fetches reduction axis information for a given tensor and axis.
+     *
+     * This function computes the necessary values for reducing a tensor along a specified axis:
+     *
+     * - `jump`: The stride for accessing elements in the flattened array.
+     *
+     * - `numBatches`: The number of independent reductions that occur.
+     *
+     * - `incrementBatchIdx`: The step size to move between batches during reduction.
+     *
+     * - `outShape`: The shape of the output tensor after reduction.
+     *
+     * @param meta The metadata of the input tensor.
+     * @param axis The axis along which reduction is performed.
+     * @param keepDims If true, keeps the reduced dimension as size 1; otherwise, it is removed.
+     * @return A tuple containing (jump, numBatches, incrementBatchIdx, outShape).
+     */
+    static std::tuple<int, int, int, std::vector<int>> fetchReduceAxInfo(const TensorMeta& meta, int axis,
+                                                                         bool keepDims = false) {
+        std::vector<int> outShape = fetchSqueezedShape(meta.tensorSize, {axis}, keepDims);
+        int jump = 1;
+        int numBatches = 1;
+        for (int i = 0; i < meta.ndim(); i++) {
+            if (i < axis)
+                numBatches *= meta.tensorSize[i];
+            if (i > axis)
+                jump *= meta.tensorSize[i];
+        }
+        int incrementBatchIdx = jump * meta.tensorSize[axis];
+
+        return std::make_tuple(jump, numBatches, incrementBatchIdx, outShape);
+    }
+
+    /**
+     * @brief Performs reduction along multiple axes using a given operation.
+     *
+     * This function applies reduction sequentially over multiple axes, reducing one at a time.
+     * The reduction function (e.g., sum, max, min) is applied to each axis in order.
+     *
+     * @param meta The input tensor metadata.
+     * @param axis A list of axes along which to perform the reduction.
+     * @param op A binary function defining the reduction operation.
+     * @param keepDims If true, retains reduced dimensions as size 1.
+     * @param initVal The initial value for the reduction operation.
+     * @return A new TensorMeta object representing the reduced tensor.
+     */
+    static TensorMeta reduce(const TensorMeta& meta, std::vector<int> axis, std::function<double(double, double)> op,
+                             bool keepDims = false, double initVal = 0) {
+        // If no axis specified then perform on the whole data
+        if (axis.size() == 0) {
+            axis = arange(0, meta.ndim());
+        }
+        TensorMeta out = meta;
+        sort(axis.rbegin(), axis.rend());
+        for (auto dim : axis) {
+            out = reduceSingle(out, dim, op, keepDims, initVal);
+        }
+        return out;
+    }
+
+    /**
+     * @brief Performs reduction along a single axis.
+     *
+     * This function reduces the tensor along the specified axis using the provided binary operation.
+     * It utilizes precomputed stride and batch size information for optimized indexing.
+     *
+     * @param meta The input tensor metadata.
+     * @param ax The axis along which reduction is performed.
+     * @param op A binary function defining the reduction operation (e.g., sum, max).
+     * @param keepDims If true, retains the reduced dimension as size 1.
+     * @param initVal The initial value for the reduction operation.
+     * @return A new TensorMeta object representing the reduced tensor.
+     */
+    static TensorMeta reduceSingle(const TensorMeta& meta, int ax, std::function<double(double, double)> op,
+                                   bool keepDims = false, double initVal = 0) {
+        auto [jump, numBatches, incrementBatchIdx, outShape] = fetchReduceAxInfo(meta, ax, keepDims);
+        TensorMeta out(outShape);
+        out.updateAll(initVal);
+
+        for (int idx = 0; idx < meta.numel; ++idx) {
+            int outIdx = ((idx / incrementBatchIdx) * jump) + (idx % jump);
+            out.rawData[outIdx] = op(out.rawData[outIdx], meta.rawData[idx]);
+        }
+
+        return out;
+    }
+
+    static TensorMeta sum(const TensorMeta& meta, std::vector<int> dims, bool keepDims = false) {
+        std::function<double(double, double)> op = [](double a, double b) { return a + b; };
+        return reduce(meta, dims, op, keepDims);
+    }
+
+    static TensorMeta max(const TensorMeta& meta, std::vector<int> dims, bool keepDims = false) {
+        std::function<double(double, double)> op = [](double a, double b) { return std::max(a, b); };
+        return reduce(meta, dims, op, keepDims);
+    }
+
+    static TensorMeta min(const TensorMeta& meta, std::vector<int> dims, bool keepDims = false) {
+        std::function<double(double, double)> op = [](double a, double b) { return std::min(a, b); };
+        return reduce(meta, dims, op, keepDims, DOUBLE_MAX);
+    }
+
+    static TensorMeta mean(const TensorMeta& meta, std::vector<int> dims, bool keepDims = false) {
+        TensorMeta out = TensorMeta::sum(meta, dims, keepDims);
+        int divisor = 1;
+        for (auto ax : dims) {
+            divisor *= meta.tensorSize[ax];
+        }
+        return out / double(divisor);
+    }
+
+    TensorMeta sum(std::vector<int> dims, bool keepDims = false) { return sum(*this, dims, keepDims); }
+    TensorMeta min(std::vector<int> dims, bool keepDims = false) { return min(*this, dims, keepDims); }
+    TensorMeta max(std::vector<int> dims, bool keepDims = false) { return max(*this, dims, keepDims); }
+    TensorMeta mean(std::vector<int> dims, bool keepDims = false) { return mean(*this, dims, keepDims); }
+
+#pragma endregion
+
+#pragma region Wrangler
+    /**
      * @brief Rearranges the dimensions of the tensor according to a given permutation.
      * @param perm The permutation order.
      * @return The permuted tensor metadata.
@@ -807,8 +923,6 @@ class TensorMeta {
         std::vector<int> newStride = fetchStride(newShape);
 
         for (int ix = 0; ix < numel; ++ix) {
-            // printVec(indices);
-
             std::vector<int> newIndices(n, -1);
 
             // Fetch new multi indices
@@ -860,4 +974,7 @@ class TensorMeta {
 
         return permute(perm);
     }
+
+#pragma endregion
 };
+}  // namespace rash
