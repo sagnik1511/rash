@@ -1,391 +1,366 @@
-/**
- * @file tensor.hpp
- * @brief Implementation of an n-dimensional Tensor class with autograd functionality.
- */
-#include <math.h>
+#pragma once
 
+#include <cassert>
 #include <functional>
 #include <iostream>
-#include <map>
-#include <string>
+#include <memory>
 #include <vector>
 
 #include "tensorMeta.hpp"
 
-/**
- * @brief Converts a boolean value to a string representation.
- * @param val Boolean value to convert.
- * @return "true" if val is true, "false" otherwise.
- */
 const char* bool2String(bool val) { return val ? "true" : "false"; }
 
-/*
-This a fairly simple n-dimensional Tensor Class
-which is designed to learn how primitive tensor operations like forward and backward work.
-This class also have autograd functionality like PyTorch (unlike it's efficient performance)
-Oh, btw for now the n in n-dimensional is 1 :)
-*/
-class Tensor {
+namespace rash {
+
+/**
+ * @brief Constructs a TensorImpl object.
+ *
+ * @param data The tensor's data.
+ * @param requiresGrad Flag to indicate if gradients are needed.
+ * @param tensorTag A unique identifier for the tensor.
+ */
+class TensorImpl {
+   public:
+    std::map<std::string, bool> gradVisited;
+    std::function<void(TensorMeta)> _backward;
+    std::vector<std::weak_ptr<TensorImpl>> prev;
+    bool requiresGrad;
     TensorMeta data_, grad;
     std::string tag;
-    bool requiresGrad, trainable;
-    static int tensorCounter;
-    std::function<void(TensorMeta, bool)> _backward;
-    std::vector<Tensor*> prev;
-    std::map<std::string, bool> gradVisited;
-
-   public:
-    static std::map<std::string, Tensor*> tensors;
-    /**
-     * @brief Constructs a Tensor object.
-     * @param data Tensor data.
-     * @param requiresGrad Whether to track gradients.
-     * @param tensorTag Identifier for the tensor.
-     * @param trainable Whether the tensor is trainable.
-     */
-    Tensor(TensorMeta data, bool requiresGrad = false, std::string tensorTag = "", bool trainable = false)
-        : data_(data), requiresGrad(requiresGrad), trainable(trainable) {
-        if (tensorTag == "")
-            this->tag = "tensor_" + std::to_string(++tensorCounter);
-        else
-            this->tag = tensorTag;
-
-        if (tag != "")
-            tensors[tag] = this;
-
-        grad = TensorMeta(data);
+    TensorImpl(TensorMeta data, bool requiresGrad, std::string tensorTag)
+        : data_(std::move(data)), requiresGrad(requiresGrad), tag(tensorTag) {
+        grad = TensorMeta(data_.shape());
         grad.updateAll(0.0);
     }
 
     /**
-     * @brief Constructs a Tensor from a single double value.
+     * @brief Performs backpropagation through the computation graph.
      */
-    Tensor(double data, bool requiresGrad = false, std::string tensorTag = "", bool trainable = false)
-        : data_(TensorMeta(data)), requiresGrad(requiresGrad), trainable(trainable) {
-        if (tensorTag == "")
-            this->tag = "tensor_" + std::to_string(++tensorCounter);
-        else
-            this->tag = tensorTag;
+    void backward() {
+        // Return if already calculated the gradients
+        if (gradVisited[tag]) {
+            return;
+        }
 
-        if (tag != "")
-            tensors[tag] = this;
+        // Mark gradients calculated
+        gradVisited[tag] = true;
 
-        grad = TensorMeta(data);
-        grad.updateAll(0.0);
+        // Return if no backward function found!
+        if (!(requiresGrad && _backward)) {
+            return;
+        }
+
+        // Perform gradeint update
+        _backward(grad);
+
+        // Backtrack to previous linked tensors
+        for (auto& weak_ptr : prev) {
+            if (auto p = weak_ptr.lock())
+                p->backward();
+        }
     }
 
-    Tensor() : data_(TensorMeta()), requiresGrad(false), tag("") {};
+    /**
+     * @brief Resets gradients to zero.
+     */
+    void zeroGrad() { grad.updateAll(0.0); }
 
     /**
-     * @brief Destructor for the Tensor class.
+     * @brief Accumulates gradients, handling broadcasting where necessary.
+     *
+     * @param incGrad Incoming gradient to be accumulated.
      */
-    ~Tensor() {
-        std::cout << "Destoyed! " << this->tag << std::endl;
-        tensors.erase(tag);
-    };
-
-    /**
-     * @brief Overloaded output stream operator for printing tensors.
-     */
-    friend std::ostream& operator<<(std::ostream& os, const Tensor& tensor) {
-        os << "Tensor(";
-        os << tensor.data_ << ", requires_grad=" << bool2String(tensor.requiresGrad) << ", ";
-        if (tensor.requiresGrad)
-            os << "Grad=" << tensor.grad << ", ";
-        os << "Tag=" << tensor.tag;
-        os << ")  ";
-        return os;
-    }
-
-    // This function helps the broadcasted tensor meta2 match dimension with meta1
-    static TensorMeta squeezeSum(const TensorMeta& dat1, const TensorMeta& dat2) {
-        TensorMeta out = dat2;
-        auto [addedDims, bcDims] = TensorMeta::fetchBroadcastedAxes(dat1, dat2);
+    void accumulateGrad(TensorMeta incGrad) {
+        TensorMeta out = incGrad;
+        auto [addedDims, bcDims] = TensorMeta::fetchBroadcastedAxes(grad, out);
         if (bcDims.size())
             out = out.sum(bcDims);
         if (addedDims.size())
             out = out.sum(addedDims, true);
 
-        return out;
+        grad += out;
     }
 
     /**
-     * @brief Performs tensor addition with autograd support.
+     * @brief Updates the gradient with a new value.
+     *
+     * @param updGrad The new gradient value.
      */
-    Tensor operator+(Tensor& other) {
-        std::string newTag = "(" + tag + "+" + other.tag + ")";
-        Tensor out = Tensor(data_ + other.data_, requiresGrad || other.requiresGrad, newTag);
-        out._backward = [this, &other](TensorMeta incGrad, bool verbose = false) {
-            if (verbose) {
-                std::cout << "Running +Grad on '" << this->tag << "' and '" << other.tag << "'\n";
-                std::cout << "Incoming Gradient : " << incGrad << "\n";
-            }
+    void updateGrad(TensorMeta updGrad) { grad = updGrad; }
+};
+/**
+ * @brief General Tensor Class
+ */
+class Tensor {
+   public:
+    std::shared_ptr<TensorImpl> impl;
 
-            if (this->requiresGrad) {
-                this->grad += squeezeSum(this->grad, incGrad);
-                if (verbose)
-                    std::cout << "Grad Value of " << this->tag << " now : " << this->grad << std::endl;
-            }
+    /**
+     * @brief Constructs a Tensor with specified data.
+     */
+    Tensor(TensorMeta data, bool requiresGrad, std::string tag)
+        : impl(std::make_shared<TensorImpl>(data, requiresGrad, tag)) {}
 
-            if (other.requiresGrad) {
-                other.grad += squeezeSum(other.grad, incGrad);
-                if (verbose)
-                    std::cout << "Grad Value of " << other.tag << " now : " << other.grad << std::endl;
-            }
+    /**
+     * @brief Constructs a scalar Tensor.
+     */
+    Tensor(double data, bool requiresGrad, std::string tag)
+        : impl(std::make_shared<TensorImpl>(TensorMeta(data), requiresGrad, tag)) {};
+
+    /**
+     * @brief Constructs a Tensor from a vector.
+     */
+    Tensor(std::vector<double> data, std::vector<int> shape, bool requiresGrad, std::string tag)
+        : impl(std::make_shared<TensorImpl>(TensorMeta(data, shape), requiresGrad, tag)) {}
+
+    /**
+     * @brief Overloads the output stream operator for printing tensors.
+     */
+    friend std::ostream& operator<<(std::ostream& os, const Tensor& tensor) {
+        os << "Tensor(";
+        os << tensor.impl->data_ << ", requires_grad=" << bool2String(tensor.impl->requiresGrad) << ", ";
+        if (tensor.impl->requiresGrad)
+            os << "Grad=" << tensor.impl->grad << ", ";
+        os << "Tag=" << tensor.impl->tag;
+        os << ")  ";
+        return os;
+    }
+
+    /**
+     * @brief Adds two tensors.
+     */
+    Tensor operator+(const Tensor& other) {
+        std::string newTag = "(" + this->impl->tag + "+" + other.impl->tag + ")";
+        Tensor out(this->impl->data_ + other.impl->data_, this->impl->requiresGrad || other.impl->requiresGrad, newTag);
+
+        out.impl->prev = {impl, other.impl};
+        out.impl->_backward = [out_impl = out.impl](TensorMeta incGrad) {
+            auto p0 = out_impl->prev[0].lock();
+            auto p1 = out_impl->prev[1].lock();
+
+            if (p0->requiresGrad)
+                p0->accumulateGrad(incGrad);
+            if (p1->requiresGrad)
+                p1->accumulateGrad(incGrad);
         };
-        out.prev = {this, &other};
 
         return out;
     }
 
     /**
-     * @brief Performs negation on a tensor.
+     * @brief Negates a tensor.
      */
     Tensor operator-() {
-        std::string newTag = "(-" + tag + ")";
-        Tensor out = Tensor(-data_, requiresGrad, newTag);
-        out._backward = [this](TensorMeta incGrad, bool verbose = false) {
-            if (verbose) {
-                std::cout << "Running -Grad on '" << this->tag << "'\n";
-                std::cout << "Incoming Gradient : " << incGrad << "\n";
-            }
+        std::string newTag = "(-" + impl->tag + ")";
+        Tensor out(-impl->data_, impl->requiresGrad, newTag);
+        out.impl->prev = {impl};
+        out.impl->_backward = [out_impl = out.impl](TensorMeta incGrad) {
+            auto p0 = out_impl->prev[0].lock();
 
-            if (this->requiresGrad) {
-                this->grad -= squeezeSum(this->grad, incGrad);
-                if (verbose)
-                    std::cout << "Grad Value of " << this->tag << " now : " << this->grad << std::endl;
-            }
+            if (p0->requiresGrad)
+                p0->accumulateGrad(-incGrad);
         };
-        out.prev = {this};
 
         return out;
     }
 
     /**
-     * @brief Performs tensor subtraction with autograd support.
+     * @brief Substracts two tensors.
      */
-    Tensor operator-(Tensor& other) {
-        std::string newTag = "(" + tag + "-" + other.tag + ")";
-        Tensor out = Tensor(data_ - other.data_, requiresGrad || other.requiresGrad, newTag);
-        out._backward = [this, &other](TensorMeta incGrad, bool verbose = false) {
-            if (verbose) {
-                std::cout << "Running -Grad on '" << this->tag << "' and '" << other.tag << "'\n";
-                std::cout << "Incoming Gradient : " << incGrad << "\n";
-            }
+    Tensor operator-(const Tensor& other) {
+        std::string newTag = "(" + this->impl->tag + "-" + other.impl->tag + ")";
+        Tensor out(this->impl->data_ - other.impl->data_, this->impl->requiresGrad || other.impl->requiresGrad, newTag);
 
-            if (this->requiresGrad) {
-                this->grad += squeezeSum(this->grad, incGrad);
-                if (verbose)
-                    std::cout << "Grad Value of " << this->tag << " now : " << this->grad << std::endl;
-            }
+        out.impl->prev = {impl, other.impl};
+        out.impl->_backward = [out_impl = out.impl](TensorMeta incGrad) {
+            auto p0 = out_impl->prev[0].lock();
+            auto p1 = out_impl->prev[1].lock();
 
-            if (other.requiresGrad) {
-                other.grad -= squeezeSum(other.grad, incGrad);
-                if (verbose)
-                    std::cout << "Grad Value of " << other.tag << " now : " << other.grad << std::endl;
-            }
+            if (p0->requiresGrad)
+                p0->accumulateGrad(incGrad);
+            if (p1->requiresGrad)
+                p1->accumulateGrad(-incGrad);
         };
-        out.prev = {this, &other};
 
         return out;
     }
 
     /**
-     * @brief Performs tensor multiplication with autograd support.
+     * @brief Multiplies two tensors.
      */
-    Tensor operator*(Tensor& other) {
-        std::string newTag = "(" + tag + "*" + other.tag + ")";
-        Tensor out = Tensor(data_ * other.data_, requiresGrad || other.requiresGrad, newTag);
-        out._backward = [this, &other](TensorMeta incGrad, bool verbose = false) {
-            if (verbose) {
-                std::cout << "Running *Grad on '" << this->tag << "' and '" << other.tag << "'\n";
-                std::cout << "Incoming Gradient : " << incGrad << "\n";
-            }
+    Tensor operator*(const Tensor& other) {
+        std::string newTag = "(" + this->impl->tag + "*" + other.impl->tag + ")";
+        Tensor out(this->impl->data_ * other.impl->data_, this->impl->requiresGrad || other.impl->requiresGrad, newTag);
 
-            if (this->requiresGrad) {
-                this->grad += squeezeSum(this->grad, other.data_ * incGrad);
-                if (verbose)
-                    std::cout << "Grad Value of " << this->tag << " now : " << this->grad << std::endl;
-            }
-            if (other.requiresGrad) {
-                other.grad += squeezeSum(other.grad, this->data_ * incGrad);
-                if (verbose)
-                    std::cout << "Grad Value of " << other.tag << " now : " << other.grad << std::endl;
-            }
+        out.impl->prev = {impl, other.impl};
+        out.impl->_backward = [out_impl = out.impl](TensorMeta incGrad) {
+            auto p0 = out_impl->prev[0].lock();
+            auto p1 = out_impl->prev[1].lock();
+
+            if (p0->requiresGrad)
+                p0->accumulateGrad(incGrad * p1->data_);
+            if (p1->requiresGrad)
+                p1->accumulateGrad(incGrad * p0->data_);
         };
-        out.prev = {this, &other};
+
         return out;
     }
 
     /**
-     * @brief Performs tensor division with autograd support.
+     * @brief Divides two tensors.
      */
-    Tensor operator/(Tensor& other) {
-        std::string newTag = "(" + tag + "/" + other.tag + ")";
-        Tensor out = Tensor(data_ / other.data_, requiresGrad || other.requiresGrad, newTag);
-        out._backward = [this, &other](TensorMeta incGrad, bool verbose = false) {
-            if (verbose) {
-                std::cout << "Running /Grad on '" << this->tag << "' and '" << other.tag << "'\n";
-                std::cout << "Incoming Gradient : " << incGrad << "\n";
-            }
+    Tensor operator/(const Tensor& other) {
+        std::string newTag = "(" + impl->tag + "/" + other.impl->tag + ")";
+        Tensor out(impl->data_ / other.impl->data_, impl->requiresGrad || other.impl->requiresGrad, newTag);
 
-            if (this->requiresGrad) {
-                this->grad += squeezeSum(this->grad, incGrad / other.data_);
-                if (verbose)
-                    std::cout << "Grad Value of " << this->tag << " now : " << this->grad << std::endl;
-            }
-            if (other.requiresGrad) {
-                other.grad -= squeezeSum(other.grad, (this->data_ / (other.data_ * other.data_)) * incGrad);
-                if (verbose)
-                    std::cout << "Grad Value of " << other.tag << " now : " << other.grad << std::endl;
-            }
+        out.impl->prev = {impl, other.impl};
+        out.impl->_backward = [out_impl = out.impl](TensorMeta incGrad) {
+            auto p0 = out_impl->prev[0].lock();
+            auto p1 = out_impl->prev[1].lock();
+
+            if (p0->requiresGrad)
+                p0->accumulateGrad(incGrad / p1->data_);
+            if (p1->requiresGrad)
+                p1->accumulateGrad(-incGrad * (p0->data_ / (p1->data_ * p1->data_)));
         };
-        out.prev = {this, &other};
+
         return out;
     }
 
     /**
-     * @brief Computes the exponential of the tensor.
+     * @brief Greater than comparison of two tensors.
+     */
+    Tensor operator>(const Tensor& other) {
+        std::string newTag = "(" + impl->tag + "/" + other.impl->tag + ")";
+        Tensor out(impl->data_ > other.impl->data_, false, newTag);
+
+        return out;
+    }
+
+    /**
+     * @brief Greater than equals to comparison of two tensors.
+     */
+    Tensor operator>=(const Tensor& other) {
+        std::string newTag = "(" + impl->tag + "/" + other.impl->tag + ")";
+        Tensor out(impl->data_ >= other.impl->data_, false, newTag);
+
+        return out;
+    }
+
+    /**
+     * @brief Less than comparison of two tensors.
+     */
+    Tensor operator<(const Tensor& other) {
+        std::string newTag = "(" + impl->tag + "/" + other.impl->tag + ")";
+        Tensor out(impl->data_ < other.impl->data_, false, newTag);
+
+        return out;
+    }
+
+    /**
+     * @brief Less than equals to comparison of two tensors.
+     */
+    Tensor operator<=(const Tensor& other) {
+        std::string newTag = "(" + impl->tag + "/" + other.impl->tag + ")";
+        Tensor out(impl->data_ <= other.impl->data_, false, newTag);
+
+        return out;
+    }
+
+    /**
+     * @brief Computes element-wise exponential of the tensor.
      */
     Tensor exp() {
-        std::string newTag = "exp(" + tag + ")";
-        TensorMeta expVal = TensorMeta::exp(this->data_);
-        Tensor out = Tensor(expVal, requiresGrad, newTag);
-        out._backward = [this, expVal](TensorMeta incGrad, bool verbose = false) {
-            if (verbose) {
-                std::cout << "Running (e^)Grad on '" << this->tag << "'\n";
-                std::cout << "Incoming Gradient : " << incGrad << "\n";
-            }
+        std::string newTag = "exp(" + impl->tag + ")";
+        TensorMeta expVal = TensorMeta::exp(impl->data_);
+        Tensor out(expVal, impl->requiresGrad, newTag);
+        out.impl->prev = {impl};
+        out.impl->_backward = [expVal = expVal, out_impl = out.impl](TensorMeta incGrad) {
+            auto p0 = out_impl->prev[0].lock();
 
-            if (requiresGrad) {
-                this->grad += expVal * incGrad;
-                if (verbose)
-                    std::cout << "Grad Value of " << this->tag << " now : " << this->grad << std::endl;
-            }
+            if (p0->requiresGrad)
+                p0->accumulateGrad(incGrad * expVal);
         };
-        out.prev = {this};
+
         return out;
     }
 
     /**
      * @brief Returns the transpose of the tensor.
      */
-    Tensor T() {
-        std::string newTag = tag + ".T";
-        Tensor out = Tensor(data_.T(), requiresGrad, newTag);
-        out._backward = [this](TensorMeta incGrad, bool verbose = false) {
-            if (verbose) {
-                std::cout << "Running T() Grad on '" << this->tag << "'\n";
-                std::cout << "Incoming Gradient : " << incGrad << "\n";
-            }
+    Tensor T() const {
+        std::string newTag = "(" + impl->tag + ").T";
+        Tensor out(impl->data_.T(), impl->requiresGrad, newTag);
+        out.impl->prev = {impl};
+        out.impl->_backward = [out_impl = out.impl](TensorMeta incGrad) {
+            auto p0 = out_impl->prev[0].lock();
 
-            if (requiresGrad) {
-                this->grad += incGrad.T();
-                if (verbose)
-                    std::cout << "Grad Value of " << this->tag << " now : " << this->grad << std::endl;
-            }
+            if (p0->requiresGrad)
+                p0->accumulateGrad(incGrad.T());
         };
-        out.prev = {this};
+
         return out;
     }
 
     /**
-     * @brief Performs matrix multiplication between tensors.
+     * @brief Computes matrix multiplication of two tensors.
      */
-    Tensor matmul(Tensor& other) {
-        std::string newTag = "(" + tag + "@" + other.tag + ")";
-        Tensor out = Tensor(TensorMeta::matmul(data_, other.data_), requiresGrad || other.requiresGrad, newTag);
+    static Tensor matmul(const Tensor& t1, const Tensor& t2) {
+        std::string newTag = "(" + t1.impl->tag + "@" + t2.impl->tag + ")";
+        Tensor out(TensorMeta::matmul(t1.impl->data_, t2.impl->data_), t1.impl->requiresGrad || t2.impl->requiresGrad,
+                   newTag);
+        out.impl->prev = {t1.impl, t2.impl};
+        out.impl->_backward = [out_impl = out.impl](TensorMeta incGrad) {
+            auto p0 = out_impl->prev[0].lock();
+            auto p1 = out_impl->prev[1].lock();
 
-        out._backward = [this, &other](TensorMeta incGrad, bool verbose = false) {
-            if (verbose) {
-                std::cout << "Running @Grad on '" << this->tag << "' and '" << other.tag << "'\n";
-                std::cout << "Incoming Gradient : " << incGrad << "\n";
-            }
-
-            if (this->requiresGrad) {
-                this->grad += squeezeSum(this->grad, TensorMeta::matmul(incGrad, other.data_.transpose()));
-                if (verbose)
-                    std::cout << "Grad Value of " << this->tag << " now : " << this->grad << std::endl;
-            }
-            if (other.requiresGrad) {
-                other.grad += squeezeSum(other.grad, TensorMeta::matmul(this->data_.transpose(), incGrad));
-                if (verbose)
-                    std::cout << "Grad Value of " << other.tag << " now : " << other.grad << std::endl;
-            }
+            if (p0->requiresGrad)
+                p0->accumulateGrad(TensorMeta::matmul(incGrad, p1->data_.transpose()));
+            if (p1->requiresGrad)
+                p1->accumulateGrad(TensorMeta::matmul(p0->data_.transpose(), incGrad));
         };
-        out.prev = {this, &other};
+
         return out;
     }
-
-    /**
-     * @brief Computes the gradient of the tensor through backpropagation.
-     * @param isRoot If true, initializes backpropagation.
-     * @param verbose If true, prints debug information.
-     */
-    void backward(bool isRoot = true, bool verbose = false) {
-        if (isRoot) {
-            grad.updateAll(1.0);
-            gradVisited.clear();
-        }
-
-        // Skip if already visited
-        if (gradVisited[this->tag]) {
-            return;
-        }
-        gradVisited[this->tag] = true;
-
-        if (requiresGrad && _backward) {
-            if (verbose)
-                std::cout << "Running backward of " << tag << "\n";
-            _backward(grad, verbose);
-
-            if (prev.size() == 0) {
-                if (verbose)
-                    std::cout << this->tag << " is leaf node!" << std::endl;
-            }
-            for (auto& tensor : prev) {
-                tensor->backward(false, verbose);
-            }
-        }
-    }
-
-    /**
-     * @brief Returns the data of the tensor.
-     */
-    TensorMeta fetchData() { return data_; }
-
-    /**
-     * @brief Returns the gradient of the tensor.
-     */
-    TensorMeta fetchGrad() { return grad; }
-
-    /**
-     * @brief Updates the tensor data.
-     */
-    void updateData(TensorMeta value) { this->data_ = value; }
-
-    /**
-     * @brief Updates the gradient of the tensor.
-     */
-    void updaetGrad(TensorMeta value) { this->grad = value; }
 
     /**
      * @brief Resets the gradient to zero.
      */
-    void zeroGrad() { this->grad.updateAll(0.0); }
+    void zeroGrad() { impl->zeroGrad(); }
 
     /**
-     * @brief Updates the tag of the tensor.
+     * @brief Performs backpropagation from this tensor.
      */
-    void updateTag(std::string newTag) { this->tag = newTag; }
+    void backward() {
+        impl->gradVisited.clear();
+        impl->grad.updateAll(1.0);
+        impl->backward();
+    }
 
     /**
-     * @brief Generates a tensor with random values.
-     * @param shape Shape of the tensor.
-     * @param requiresGrad Whether to track gradients.
-     * @return A random Tensor.
+     * @brief Generates a random tensor.
      */
-    static Tensor rand(const std::vector<int>& shape, bool requiresGrad = false) {
-        return Tensor(TensorMeta(shape), requiresGrad);
+    static Tensor rand(const std::vector<int>& shape, bool requiresGrad = false, std::string tensorTag = "") {
+        return Tensor(TensorMeta(shape), requiresGrad, tensorTag);
+    }
+
+    /**
+     * @brief Retrieves the data of the tensor.
+     */
+    TensorMeta fetchData() const { return impl->data_; }
+
+    /**
+     * @brief Retrieves the gradient of the tensor.
+     */
+    TensorMeta fetchGrad() const { return impl->grad; }
+
+    /**
+     * @brief Updates the gradient with a new value.
+     */
+    void updateGrad(TensorMeta incGrad) {
+        assert(incGrad.shape() == impl->grad.shape() && "Grad Shape should match!");
+        impl->updateGrad(incGrad);
     }
 };
+
+}  // namespace rash
