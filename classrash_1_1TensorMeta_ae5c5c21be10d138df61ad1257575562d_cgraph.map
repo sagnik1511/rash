@@ -1,0 +1,10 @@
+<map id="rash::TensorMeta::fetchMatmulSize" name="rash::TensorMeta::fetchMatmulSize">
+<area shape="rect" id="Node000001" title="Computes the output shape for matrix multiplication, considering broadcasting rules." alt="" coords="5,31,256,56"/>
+<area shape="rect" id="Node000002" href="$classrash_1_1TensorMeta.html#a67a46d7950fbab7e8afe3077131d3c92" title="Computes the broadcasted shape for two tensors." alt="" coords="547,5,829,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="256,35,532,22,533,28,256,40"/>
+<area shape="rect" id="Node000003" href="$classrash_1_1TensorMeta.html#ad984de354e3605245174f8ffdaf43199" title="Validates if two tensors can be multiplied using matrix multiplication." alt="" coords="304,51,499,91"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="254,53,291,57,290,63,253,59"/>
+<area shape="poly" id="edge3_Node000003_Node000002" title=" " alt="" coords="498,51,605,31,606,36,499,56"/>
+<area shape="rect" id="Node000004" href="$classrash_1_1TensorMeta.html#ae4c49ee9316bd47abb1359737ba69032" title="Returns the number of dimensions of the tensor." alt="" coords="601,59,775,84"/>
+<area shape="poly" id="edge4_Node000003_Node000004" title=" " alt="" coords="499,69,587,69,587,74,499,74"/>
+</map>

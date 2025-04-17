@@ -1,0 +1,5 @@
+<map id="rash::Activation::forward" name="rash::Activation::forward">
+<area shape="rect" id="Node000001" title="Applies the activation function to the input tensor." alt="" coords="251,5,433,31"/>
+<area shape="rect" id="Node000002" href="$classrash_1_1Activation.html#a1bb4f190164e542c4723c4c00d607dd8" title="Applies the activation function to the input tensor." alt="" coords="5,5,203,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="237,21,203,21,203,15,237,15"/>
+</map>

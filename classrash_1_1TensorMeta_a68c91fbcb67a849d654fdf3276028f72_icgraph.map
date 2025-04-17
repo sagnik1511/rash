@@ -1,0 +1,8 @@
+<map id="rash::TensorMeta::matmulBroadcast" name="rash::TensorMeta::matmulBroadcast">
+<area shape="rect" id="Node000001" title="Performs batched matrix multiplication with broadcasting." alt="" coords="452,22,644,62"/>
+<area shape="rect" id="Node000002" href="$classrash_1_1TensorMeta.html#a3b4866096048e4bf999f00be36baa4ca" title="Computes the matrix multiplication of two tensors with broadcasting support." alt="" coords="212,29,404,55"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="438,45,404,45,404,39,438,39"/>
+<area shape="poly" id="edge3_Node000002_Node000002" title=" " alt="" coords="348,20,337,11,308,8,284,10,272,15,269,20,276,28,272,31,264,21,268,11,283,5,308,3,339,6,351,15"/>
+<area shape="rect" id="Node000003" href="$classrash_1_1Tensor.html#aa0f489a37ff4bcbf6370cd8eedb09b18" title="Computes matrix multiplication of two tensors." alt="" coords="5,29,164,55"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="198,45,164,45,164,39,198,39"/>
+</map>

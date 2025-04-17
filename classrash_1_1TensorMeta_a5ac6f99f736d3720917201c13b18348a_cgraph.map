@@ -1,0 +1,5 @@
+<map id="rash::TensorMeta::getMatmulBatchIndex" name="rash::TensorMeta::getMatmulBatchIndex">
+<area shape="rect" id="Node000001" title="Computes the batch index offset for a given batch shape and strides." alt="" coords="5,5,217,45"/>
+<area shape="rect" id="Node000002" href="$classrash_1_1TensorMeta.html#a2a31e05a53726f452e033bd90346d8d9" title="Returns the shape of the tensor." alt="" coords="265,13,445,38"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="217,23,252,23,252,28,217,28"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="rash::TensorMeta::permute" name="rash::TensorMeta::permute">
+<area shape="rect" id="Node000001" title="Rearranges the dimensions of the tensor according to a given permutation." alt="" coords="259,31,455,56"/>
+<area shape="rect" id="Node000002" href="$classrash_1_1TensorMeta.html#a5b3c791a6ef8988e52e67e50f9447afe" title="Returns the transposed version of the tensor by reversing all dimensions." alt="" coords="33,5,183,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="245,35,183,28,183,23,245,29"/>
+<area shape="rect" id="Node000003" href="$classrash_1_1TensorMeta.html#aafff050d9d6b930c05172eb248cefb0f" title="Transposes two dimensions of the tensor." alt="" coords="5,55,211,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="245,57,211,60,211,55,245,51"/>
+</map>

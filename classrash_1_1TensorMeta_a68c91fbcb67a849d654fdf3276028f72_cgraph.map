@@ -1,0 +1,22 @@
+<map id="rash::TensorMeta::matmulBroadcast" name="rash::TensorMeta::matmulBroadcast">
+<area shape="rect" id="Node000001" title="Performs batched matrix multiplication with broadcasting." alt="" coords="5,157,197,197"/>
+<area shape="rect" id="Node000002" href="$classrash_1_1TensorMeta.html#ae5c5c21be10d138df61ad1257575562d" title="Computes the output shape for matrix multiplication, considering broadcasting rules." alt="" coords="245,32,496,57"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="127,154,180,118,244,81,303,59,305,64,246,86,183,122,130,159"/>
+<area shape="rect" id="Node000005" href="$classrash_1_1TensorMeta.html#ae4c49ee9316bd47abb1359737ba69032" title="Returns the number of dimensions of the tensor." alt="" coords="841,59,1015,84"/>
+<area shape="poly" id="edge11_Node000001_Node000005" title=" " alt="" coords="150,154,196,138,245,125,359,108,516,94,827,74,827,79,516,99,359,114,246,130,197,143,152,159"/>
+<area shape="rect" id="Node000006" href="$classrash_1_1TensorMeta.html#ae5b8baf2a3d37eee19ee606204700400" title=" " alt="" coords="265,164,477,189"/>
+<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="197,174,251,174,251,179,197,179"/>
+<area shape="rect" id="Node000007" href="$classrash_1_1TensorMeta.html#a5ac6f99f736d3720917201c13b18348a" title="Computes the batch index offset for a given batch shape and strides." alt="" coords="265,214,477,254"/>
+<area shape="poly" id="edge8_Node000001_Node000007" title=" " alt="" coords="196,194,263,208,262,214,195,199"/>
+<area shape="rect" id="Node000009" href="$classrash_1_1TensorMeta.html#aab42d3d7f4ad3ba902a3165bb30d175f" title="Performs atomic matrix multiplication using BLAS (cblas_dgemm)." alt="" coords="275,278,467,318"/>
+<area shape="poly" id="edge10_Node000001_Node000009" title=" " alt="" coords="131,195,183,230,246,264,266,271,264,276,244,268,180,234,128,199"/>
+<area shape="rect" id="Node000003" href="$classrash_1_1TensorMeta.html#a67a46d7950fbab7e8afe3077131d3c92" title="Computes the broadcasted shape for two tensors." alt="" coords="787,5,1069,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="426,29,482,18,544,10,660,4,773,6,773,11,661,10,544,15,483,24,427,35"/>
+<area shape="rect" id="Node000004" href="$classrash_1_1TensorMeta.html#ad984de354e3605245174f8ffdaf43199" title="Validates if two tensors can be multiplied using matrix multiplication." alt="" coords="544,25,739,65"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="496,42,530,42,530,47,496,47"/>
+<area shape="poly" id="edge4_Node000004_Node000003" title=" " alt="" coords="739,33,778,29,778,35,739,38"/>
+<area shape="poly" id="edge5_Node000004_Node000005" title=" " alt="" coords="739,51,827,59,827,65,739,56"/>
+<area shape="poly" id="edge7_Node000006_Node000006" title=" " alt="" coords="327,166,318,156,323,146,341,139,371,137,409,141,420,146,423,152,419,155,416,150,408,147,371,143,342,145,326,150,323,155,331,162"/>
+<area shape="rect" id="Node000008" href="$classrash_1_1TensorMeta.html#a2a31e05a53726f452e033bd90346d8d9" title="Returns the shape of the tensor." alt="" coords="551,221,731,247"/>
+<area shape="poly" id="edge9_Node000007_Node000008" title=" " alt="" coords="477,231,537,231,537,237,477,237"/>
+</map>

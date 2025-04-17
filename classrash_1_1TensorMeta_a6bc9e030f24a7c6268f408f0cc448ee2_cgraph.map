@@ -1,0 +1,18 @@
+<map id="rash::TensorMeta::operator&#45;" name="rash::TensorMeta::operator&#45;">
+<area shape="rect" id="Node000001" title="Computes the element&#45;wise/broadcastabed subtraction of a tensor and a scalar." alt="" coords="5,129,207,155"/>
+<area shape="rect" id="Node000002" href="$classrash_1_1TensorMeta.html#a39fc8dc6f43f9ba54874d9b78acc1d26" title="Performs element&#45;wise broadcasting operation on two tensors." alt="" coords="260,104,465,129"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="207,129,246,125,247,131,207,135"/>
+<area shape="rect" id="Node000008" href="$classrash_1_1TensorMeta.html#a25721caa6fa0ae0a58a483766a742d25" title="Default constructor for TensorMeta." alt="" coords="255,153,471,179"/>
+<area shape="poly" id="edge8_Node000001_Node000008" title=" " alt="" coords="207,149,241,152,241,157,207,154"/>
+<area shape="rect" id="Node000003" href="$classrash_1_1TensorMeta.html#a67a46d7950fbab7e8afe3077131d3c92" title="Computes the broadcasted shape for two tensors." alt="" coords="519,5,801,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="384,101,443,70,518,39,549,31,550,36,520,45,446,75,387,106"/>
+<area shape="rect" id="Node000004" href="$classrash_1_1TensorMeta.html#ae5b8baf2a3d37eee19ee606204700400" title=" " alt="" coords="554,79,766,104"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="465,105,540,99,540,104,466,111"/>
+<area shape="rect" id="Node000005" href="$classrash_1_1TensorMeta.html#a4c3053d8cf15ec0ce4a521dc74957ec9" title="Computes the flat index for given indices in a tensor with a given shape and stride." alt="" coords="561,128,759,153"/>
+<area shape="poly" id="edge5_Node000002_Node000005" title=" " alt="" coords="466,122,547,129,547,134,465,128"/>
+<area shape="rect" id="Node000007" href="$classrash_1_1TensorMeta.html#ae4c49ee9316bd47abb1359737ba69032" title="Returns the number of dimensions of the tensor." alt="" coords="573,177,747,203"/>
+<area shape="poly" id="edge7_Node000002_Node000007" title=" " alt="" coords="433,127,472,138,496,150,520,162,560,173,559,178,518,167,493,155,470,143,431,132"/>
+<area shape="poly" id="edge4_Node000004_Node000004" title=" " alt="" coords="615,80,606,70,611,60,629,54,660,52,700,56,711,61,714,68,710,70,707,65,699,61,660,57,630,59,614,64,611,70,619,77"/>
+<area shape="rect" id="Node000006" href="$classrash_1_1TensorMeta.html#a2a31e05a53726f452e033bd90346d8d9" title="Returns the shape of the tensor." alt="" coords="849,128,1029,153"/>
+<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="760,138,836,138,836,143,760,143"/>
+</map>

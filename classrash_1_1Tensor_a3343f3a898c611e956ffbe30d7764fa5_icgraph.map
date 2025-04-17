@@ -1,0 +1,9 @@
+<map id="rash::Tensor::registerTensor" name="rash::Tensor::registerTensor">
+<area shape="rect" id="Node000001" title="Registers a tensor in the global storage." alt="" coords="204,55,404,80"/>
+<area shape="rect" id="Node000002" href="$classrash_1_1Tensor.html#ae284264ce4a5eed704d1c6d43f7f7083" title="Constructs a scalar Tensor." alt="" coords="5,5,156,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="232,54,138,33,140,28,233,49"/>
+<area shape="rect" id="Node000003" href="$classrash_1_1Tensor.html#aaf1a51caf39da6374aeb4226f83d19cb" title="Constructs a Tensor from a vector." alt="" coords="5,55,156,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="190,70,156,70,156,65,190,65"/>
+<area shape="rect" id="Node000004" href="$classrash_1_1Tensor.html#ac8d0305ee498b64061f548c712368411" title="Constructs a Tensor with specified data." alt="" coords="5,104,156,129"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="233,86,140,107,138,101,232,80"/>
+</map>

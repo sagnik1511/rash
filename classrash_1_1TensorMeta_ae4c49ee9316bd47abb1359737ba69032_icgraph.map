@@ -1,0 +1,93 @@
+<map id="rash::TensorMeta::ndim" name="rash::TensorMeta::ndim">
+<area shape="rect" id="Node000001" title="Returns the number of dimensions of the tensor." alt="" coords="1325,1336,1500,1361"/>
+<area shape="rect" id="Node000002" href="$classrash_1_1TensorMeta.html#a39fc8dc6f43f9ba54874d9b78acc1d26" title="Performs element&#45;wise broadcasting operation on two tensors." alt="" coords="1031,548,1237,573"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="1400,1324,1137,574,1142,573,1405,1322"/>
+<area shape="rect" id="Node000027" href="$classrash_1_1TensorMeta.html#a7bd163f7bf59e62532f4f361ba3c4b0c" title="Determines the broadcasted axes when expanding one tensor to match another." alt="" coords="991,1091,1277,1116"/>
+<area shape="poly" id="edge26_Node000001_Node000027" title=" " alt="" coords="1400,1324,1383,1282,1357,1231,1321,1180,1300,1157,1276,1138,1237,1118,1239,1114,1279,1133,1303,1153,1325,1177,1361,1228,1388,1280,1405,1322"/>
+<area shape="rect" id="Node000029" href="$classrash_1_1TensorMeta.html#af5be85d8fd89612379e2edfe0d5ea347" title="Fetches reduction axis information for a given tensor and axis." alt="" coords="1023,1191,1245,1231"/>
+<area shape="poly" id="edge28_Node000001_Node000029" title=" " alt="" coords="1386,1329,1337,1290,1276,1252,1227,1234,1229,1229,1279,1248,1340,1285,1389,1325"/>
+<area shape="rect" id="Node000031" href="$classrash_1_1TensorMeta.html#ae0ba4700bdc2bb4bb3798e1bc7dfa312" title="Performs reduction along multiple axes using a given operation." alt="" coords="455,1171,641,1196"/>
+<area shape="poly" id="edge40_Node000001_Node000031" title=" " alt="" coords="1398,1325,1380,1290,1353,1249,1318,1211,1276,1182,1225,1166,1155,1156,1073,1152,982,1152,797,1162,642,1176,641,1170,797,1156,982,1147,1073,1147,1156,1151,1226,1161,1279,1177,1322,1207,1357,1246,1384,1287,1403,1322"/>
+<area shape="rect" id="Node000032" href="$classrash_1_1TensorMeta.html#a3b4866096048e4bf999f00be36baa4ca" title="Computes the matrix multiplication of two tensors with broadcasting support." alt="" coords="212,1577,404,1603"/>
+<area shape="poly" id="edge31_Node000001_Node000032" title=" " alt="" coords="1410,1376,1399,1431,1375,1501,1358,1537,1336,1572,1310,1602,1279,1627,1217,1660,1153,1685,1086,1703,1017,1714,947,1720,877,1720,739,1709,610,1686,497,1658,404,1629,340,1605,342,1600,406,1624,498,1652,611,1681,740,1704,877,1715,946,1714,1016,1709,1084,1698,1151,1680,1215,1655,1276,1622,1307,1598,1332,1568,1353,1535,1370,1499,1393,1430,1405,1375"/>
+<area shape="rect" id="Node000034" href="$classrash_1_1TensorMeta.html#a68c91fbcb67a849d654fdf3276028f72" title="Performs batched matrix multiplication with broadcasting." alt="" coords="452,1462,644,1502"/>
+<area shape="poly" id="edge34_Node000001_Node000034" title=" " alt="" coords="1357,1335,1233,1305,1152,1292,1064,1282,971,1279,876,1284,782,1301,737,1314,693,1331,649,1358,612,1394,583,1432,563,1463,558,1460,579,1429,609,1391,646,1354,691,1326,735,1309,781,1296,875,1279,971,1273,1064,1277,1153,1286,1234,1300,1358,1330"/>
+<area shape="rect" id="Node000035" href="$classrash_1_1TensorMeta.html#a05c143d4342f6cc11130751da9701c71" title="Converts a scalar tensor to a double." alt="" coords="1036,1357,1232,1397"/>
+<area shape="poly" id="edge36_Node000001_Node000035" title=" " alt="" coords="1312,1361,1233,1369,1232,1364,1312,1356"/>
+<area shape="rect" id="Node000036" href="$classrash_1_1TensorMeta.html#a41a9cbdf717e1a5e5cee911abd3601ae" title="Rearranges the dimensions of the tensor according to a given permutation." alt="" coords="1036,1421,1232,1447"/>
+<area shape="poly" id="edge37_Node000001_Node000036" title=" " alt="" coords="1376,1370,1330,1392,1278,1411,1227,1424,1225,1419,1277,1406,1328,1387,1374,1365"/>
+<area shape="rect" id="Node000037" href="$classrash_1_1TensorMeta.html#a5b3c791a6ef8988e52e67e50f9447afe" title="Returns the transposed version of the tensor by reversing all dimensions." alt="" coords="743,1341,892,1367"/>
+<area shape="poly" id="edge44_Node000001_Node000037" title=" " alt="" coords="1312,1348,1277,1347,1134,1345,991,1347,892,1352,892,1346,991,1342,1134,1340,1277,1342,1312,1343"/>
+<area shape="rect" id="Node000038" href="$classrash_1_1TensorMeta.html#aafff050d9d6b930c05172eb248cefb0f" title="Transposes two dimensions of the tensor." alt="" coords="715,1423,920,1448"/>
+<area shape="poly" id="edge45_Node000001_Node000038" title=" " alt="" coords="1394,1374,1346,1421,1314,1444,1278,1462,1236,1475,1200,1481,1167,1483,1136,1481,1072,1472,990,1462,893,1451,894,1445,991,1457,1073,1466,1137,1476,1167,1478,1200,1476,1235,1469,1276,1457,1311,1440,1342,1417,1390,1370"/>
+<area shape="rect" id="Node000039" href="$classrash_1_1TensorMeta.html#a181a79d63d360c3f2d0054d2c82a1fd4" title="Removes singleton dimensions from the tensor." alt="" coords="1037,1587,1231,1612"/>
+<area shape="poly" id="edge41_Node000001_Node000039" title=" " alt="" coords="1406,1375,1390,1420,1364,1475,1327,1530,1305,1555,1279,1576,1256,1588,1232,1596,1231,1591,1254,1583,1276,1572,1301,1551,1323,1527,1360,1472,1385,1418,1401,1374"/>
+<area shape="rect" id="Node000041" href="$classrash_1_1TensorMeta.html#ad984de354e3605245174f8ffdaf43199" title="Validates if two tensors can be multiplied using matrix multiplication." alt="" coords="1037,1522,1231,1562"/>
+<area shape="poly" id="edge46_Node000001_Node000041" title=" " alt="" coords="1399,1375,1351,1440,1317,1476,1279,1506,1233,1527,1230,1522,1276,1501,1314,1472,1347,1437,1394,1372"/>
+<area shape="rect" id="Node000003" href="$classrash_1_1TensorMeta.html#a9ccea8432d370953b9b263730350afbd" title="Computes the element&#45;wise/broadcastabed absolute value of the tensor." alt="" coords="735,548,899,573"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="1017,563,899,563,899,558,1017,558"/>
+<area shape="rect" id="Node000004" href="$classrash_1_1TensorMeta.html#a2b922b8173f131b9b9349d1370986ffc" title="Computes the element&#45;wise/broadcastabed exponential of the tensor." alt="" coords="735,597,900,623"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="1039,578,900,600,899,595,1038,573"/>
+<area shape="rect" id="Node000006" href="$classrash_1_1TensorMeta.html#aea53c94a1a1df7fcbaa08d620724441a" title="Computes the element&#45;wise/broadcastabed multiplication of a tensor and a scalar." alt="" coords="716,647,919,672"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="1093,581,1024,609,943,637,892,649,891,644,942,631,1022,604,1091,576"/>
+<area shape="rect" id="Node000007" href="$classrash_1_1TensorMeta.html#a433305de60f8bc10463c58575e902686" title="Computes the element&#45;wise/broadcastabed multiplication of two tensors." alt="" coords="716,696,919,721"/>
+<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="1108,584,1037,636,991,663,944,686,903,698,902,693,942,681,989,658,1034,631,1105,580"/>
+<area shape="rect" id="Node000008" href="$classrash_1_1TensorMeta.html#abb4b3e4f973df259114cf3cff8d7ff14" title="Computes the element&#45;wise/broadcastabed addition of two tensors." alt="" coords="714,745,921,771"/>
+<area shape="poly" id="edge7_Node000002_Node000008" title=" " alt="" coords="1116,586,1087,620,1046,660,998,701,944,735,911,748,909,743,941,730,995,697,1043,656,1083,616,1112,582"/>
+<area shape="rect" id="Node000009" href="$classrash_1_1TensorMeta.html#af2bc43d1cc65be20c88891e4222baa43" title="Computes the element&#45;wise/broadcastabed addition of a tensor and a scalar." alt="" coords="714,795,921,820"/>
+<area shape="poly" id="edge8_Node000002_Node000009" title=" " alt="" coords="1121,587,1094,630,1054,684,1004,739,975,763,944,784,916,797,913,792,941,780,972,759,1000,735,1050,681,1090,627,1117,584"/>
+<area shape="rect" id="Node000010" href="$classrash_1_1TensorMeta.html#a34600782073417470c6bd24525f60100" title="Computes the element&#45;wise/broadcastabed addition of two tensors and assigns the result to the first t..." alt="" coords="708,844,927,869"/>
+<area shape="poly" id="edge9_Node000002_Node000010" title=" " alt="" coords="1125,587,1101,640,1062,707,1010,776,979,807,944,834,918,846,916,842,941,829,975,803,1006,772,1058,704,1096,637,1120,585"/>
+<area shape="rect" id="Node000011" href="$classrash_1_1TensorMeta.html#adf0fa74da402429f8db93763d35e5d2b" title="Computes the element&#45;wise/broadcastabed negation of the tensor." alt="" coords="717,893,918,919"/>
+<area shape="poly" id="edge10_Node000002_Node000011" title=" " alt="" coords="1128,587,1106,649,1069,730,1045,772,1016,813,982,851,944,883,920,896,917,891,941,878,979,847,1011,810,1040,769,1064,727,1101,647,1123,586"/>
+<area shape="rect" id="Node000012" href="$classrash_1_1TensorMeta.html#a8aa691b69d8203fcfd2579a893405661" title="Computes the element&#45;wise/broadcastabed subtraction of two tensors." alt="" coords="717,943,918,968"/>
+<area shape="poly" id="edge11_Node000002_Node000012" title=" " alt="" coords="1130,587,1111,657,1076,751,1052,801,1022,850,986,894,944,932,920,946,917,941,941,928,982,890,1017,847,1047,799,1071,749,1106,656,1125,586"/>
+<area shape="rect" id="Node000013" href="$classrash_1_1TensorMeta.html#a6bc9e030f24a7c6268f408f0cc448ee2" title="Computes the element&#45;wise/broadcastabed subtraction of a tensor and a scalar." alt="" coords="717,992,918,1017"/>
+<area shape="poly" id="edge12_Node000002_Node000013" title=" " alt="" coords="1132,587,1116,665,1083,773,1058,830,1028,886,990,937,944,981,919,996,917,991,941,977,986,934,1023,883,1054,828,1078,771,1111,664,1126,586"/>
+<area shape="rect" id="Node000014" href="$classrash_1_1TensorMeta.html#a63f492395a10795ecb3dcbaa1989c1fc" title="Computes the element&#45;wise/broadcastabed subtraction of two tensors and assigns the result to the firs..." alt="" coords="711,1041,923,1067"/>
+<area shape="poly" id="edge13_Node000002_Node000014" title=" " alt="" coords="1133,587,1120,674,1108,731,1090,794,1065,859,1033,922,993,981,944,1031,924,1043,921,1039,941,1027,989,977,1029,919,1060,857,1084,793,1102,730,1115,673,1128,587"/>
+<area shape="rect" id="Node000015" href="$classrash_1_1TensorMeta.html#a12ee4b9ade48aa82c18dee87f7aca973" title=" " alt="" coords="717,5,917,31"/>
+<area shape="poly" id="edge14_Node000002_Node000015" title=" " alt="" coords="1129,535,1119,440,1108,376,1091,307,1067,235,1035,164,993,99,969,70,941,44,916,30,919,25,944,40,972,67,998,96,1040,162,1072,233,1097,305,1114,375,1125,440,1134,534"/>
+<area shape="rect" id="Node000016" href="$classrash_1_1TensorMeta.html#add7afe3555a19463a1976ca684995c81" title="Computes the element&#45;wise/broadcastabed/broadcastabed division of a tensor and a scalar." alt="" coords="717,55,917,80"/>
+<area shape="poly" id="edge15_Node000002_Node000016" title=" " alt="" coords="1128,535,1115,448,1103,390,1085,328,1061,263,1029,200,990,143,941,93,916,79,919,75,944,89,994,139,1034,198,1066,261,1090,326,1108,389,1121,447,1133,534"/>
+<area shape="rect" id="Node000017" href="$classrash_1_1TensorMeta.html#a29f82da3416337ae7ebf41dd2f0b0b2a" title="Computes element&#45;wise/broadcastabed less than operation." alt="" coords="714,104,921,129"/>
+<area shape="poly" id="edge16_Node000002_Node000017" title=" " alt="" coords="1127,535,1111,457,1078,349,1054,292,1023,237,986,186,941,143,920,130,922,126,944,139,990,183,1028,234,1059,290,1083,348,1116,455,1132,534"/>
+<area shape="rect" id="Node000018" href="$classrash_1_1TensorMeta.html#a0c913ac6623592f35ba4fbbad9c6de0d" title="Computes element&#45;wise/broadcastabed less than operation with a scalar." alt="" coords="714,153,921,179"/>
+<area shape="poly" id="edge17_Node000002_Node000018" title=" " alt="" coords="1125,536,1107,466,1072,372,1047,322,1018,274,982,230,941,192,919,180,922,175,944,188,986,226,1022,271,1052,319,1077,369,1112,464,1130,534"/>
+<area shape="rect" id="Node000019" href="$classrash_1_1TensorMeta.html#a5f34908bd8f631c0940100d2f33b0001" title="Computes element&#45;wise/broadcastabed less than or equal to operation." alt="" coords="708,203,927,228"/>
+<area shape="poly" id="edge18_Node000002_Node000019" title=" " alt="" coords="1123,536,1102,474,1065,394,1041,351,1012,310,979,273,941,242,921,231,924,226,944,237,983,269,1016,307,1045,348,1070,391,1107,472,1128,534"/>
+<area shape="rect" id="Node000020" href="$classrash_1_1TensorMeta.html#ac73452148d989b70171bea650f23cde4" title="Computes element&#45;wise/broadcastabed less than or equal to operation with a scalar." alt="" coords="708,252,927,277"/>
+<area shape="poly" id="edge19_Node000002_Node000020" title=" " alt="" coords="1120,536,1096,484,1058,416,1006,348,975,317,941,291,919,280,921,275,944,286,979,313,1010,344,1062,413,1101,481,1125,534"/>
+<area shape="rect" id="Node000021" href="$classrash_1_1TensorMeta.html#ae60dbf9a45ba47910d84719f6c6ee22a" title="Computes element&#45;wise/broadcastabed greater than operation." alt="" coords="714,301,921,327"/>
+<area shape="poly" id="edge20_Node000002_Node000021" title=" " alt="" coords="1117,537,1090,493,1051,439,1000,385,972,361,941,340,917,329,919,324,944,336,975,357,1004,381,1055,436,1094,490,1121,534"/>
+<area shape="rect" id="Node000022" href="$classrash_1_1TensorMeta.html#acf09b7d69f880c94850c14709d99f700" title="Computes element&#45;wise/broadcastabed greater than operation with a scalar." alt="" coords="714,351,921,376"/>
+<area shape="poly" id="edge21_Node000002_Node000022" title=" " alt="" coords="1112,539,1083,505,1043,464,995,423,941,390,913,379,915,374,944,385,998,419,1047,460,1087,501,1116,535"/>
+<area shape="rect" id="Node000023" href="$classrash_1_1TensorMeta.html#add1f6af811babe5a00acd667de7e226a" title="Computes element&#45;wise/broadcastabed greater than or equal to operation." alt="" coords="708,400,927,425"/>
+<area shape="poly" id="edge22_Node000002_Node000023" title=" " alt="" coords="1105,541,1034,489,989,462,942,439,906,428,908,423,944,434,992,457,1037,485,1109,537"/>
+<area shape="rect" id="Node000024" href="$classrash_1_1TensorMeta.html#abef14de802ca9e011faac7b1382735a0" title="Computes element&#45;wise/broadcastabed greater than or equal to operation with a scalar." alt="" coords="708,449,927,475"/>
+<area shape="poly" id="edge23_Node000002_Node000024" title=" " alt="" coords="1091,545,1022,516,942,489,895,477,897,472,943,483,1024,511,1093,540"/>
+<area shape="rect" id="Node000025" href="$classrash_1_1TensorMeta.html#a0bc835a70619deed7f5af4cd60c2508e" title=" " alt="" coords="733,499,901,524"/>
+<area shape="poly" id="edge24_Node000002_Node000025" title=" " alt="" coords="1038,548,899,527,900,521,1039,543"/>
+<area shape="rect" id="Node000005" href="$classrash_1_1Tensor.html#ab9b40f81c57b4402aefdc29045208235" title="Computes element&#45;wise exponential of the tensor." alt="" coords="482,597,614,623"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="721,613,614,613,614,607,721,607"/>
+<area shape="rect" id="Node000026" href="$classrash_1_1Tensor.html#ab5060e25d5d6db506111aad8ec53d3df" title="Computes power of a tensor." alt="" coords="481,499,615,524"/>
+<area shape="poly" id="edge25_Node000025_Node000026" title=" " alt="" coords="720,514,616,514,616,509,720,509"/>
+<area shape="rect" id="Node000028" href="$classrash_1_1TensorImpl.html#a89fcd4373e7bfa70924ed9cf41d90a7b" title="Accumulates gradients, handling broadcasting where necessary." alt="" coords="695,1091,939,1116"/>
+<area shape="poly" id="edge27_Node000027_Node000028" title=" " alt="" coords="977,1106,939,1106,939,1101,977,1101"/>
+<area shape="rect" id="Node000030" href="$classrash_1_1TensorMeta.html#a419e59958b9e4793481f3d26880d3800" title="Performs reduction along a single axis." alt="" coords="725,1191,910,1231"/>
+<area shape="poly" id="edge29_Node000029_Node000030" title=" " alt="" coords="1009,1214,910,1214,910,1209,1009,1209"/>
+<area shape="poly" id="edge30_Node000030_Node000031" title=" " alt="" coords="711,1203,641,1196,641,1190,711,1198"/>
+<area shape="poly" id="edge33_Node000032_Node000032" title=" " alt="" coords="348,1568,337,1559,308,1556,284,1558,272,1563,269,1568,276,1576,272,1579,264,1569,268,1559,283,1553,308,1551,339,1554,351,1563"/>
+<area shape="rect" id="Node000033" href="$classrash_1_1Tensor.html#aa0f489a37ff4bcbf6370cd8eedb09b18" title="Computes matrix multiplication of two tensors." alt="" coords="5,1577,164,1603"/>
+<area shape="poly" id="edge32_Node000032_Node000033" title=" " alt="" coords="198,1593,164,1593,164,1587,198,1587"/>
+<area shape="poly" id="edge35_Node000034_Node000032" title=" " alt="" coords="484,1510,453,1523,336,1580,333,1575,451,1518,482,1505"/>
+<area shape="poly" id="edge38_Node000036_Node000037" title=" " alt="" coords="1037,1421,990,1411,916,1390,853,1369,855,1364,918,1385,991,1406,1038,1416"/>
+<area shape="poly" id="edge39_Node000036_Node000038" title=" " alt="" coords="1022,1437,920,1438,920,1432,1022,1432"/>
+<area shape="poly" id="edge42_Node000039_Node000032" title=" " alt="" coords="1023,1613,943,1618,795,1620,648,1616,404,1601,404,1596,648,1611,795,1615,943,1613,1023,1607"/>
+<area shape="rect" id="Node000040" href="$classrash_1_1TensorMeta.html#aab626e3aaf12d8910295cb7077ca497c" title="Removes a singleton dimension." alt="" coords="720,1577,915,1603"/>
+<area shape="poly" id="edge43_Node000039_Node000040" title=" " alt="" coords="1022,1599,915,1596,915,1590,1023,1593"/>
+<area shape="poly" id="edge49_Node000041_Node000032" title=" " alt="" coords="1023,1550,692,1569,404,1587,404,1581,692,1563,1023,1545"/>
+<area shape="rect" id="Node000042" href="$classrash_1_1TensorMeta.html#ae5c5c21be10d138df61ad1257575562d" title="Computes the output shape for matrix multiplication, considering broadcasting rules." alt="" coords="692,1472,943,1497"/>
+<area shape="poly" id="edge47_Node000041_Node000042" title=" " alt="" coords="1022,1525,888,1500,889,1495,1023,1519"/>
+<area shape="poly" id="edge48_Node000042_Node000034" title=" " alt="" coords="678,1486,644,1486,644,1480,678,1481"/>
+</map>

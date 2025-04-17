@@ -1,0 +1,5 @@
+<map id="rash::Activation" name="rash::Activation">
+<area shape="rect" id="Node000001" title="Abstract base class for activation functions." alt="" coords="5,5,129,31"/>
+<area shape="rect" id="Node000002" href="$classrash_1_1ReLU.html" title="ReLU (Rectified Linear Unit) activation function." alt="" coords="21,79,113,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="70,44,70,79,65,79,65,44"/>
+</map>
