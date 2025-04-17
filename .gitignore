@@ -1,0 +1,52 @@
+# Build folders
+/build/
+/bin/
+/obj/
+
+# Compiled object files
+*.o
+*.obj
+*.so
+*.dll
+*.dylib
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Backup / temp files
+*~
+*.swp
+*.bak
+*.tmp
+
+# CMake / Makefiles (if later added)
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# IDE files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Logs
+*.log
+
+# Docker files (optional - if generated build artifacts exist)
+*.tar
+*.gz
+
+# Ignore everything in rash/ except headers (optional)
+# (only needed if rash/ has temp files someday)
+rash/*
+!rash/*.hpp
+
+# Ignore everything in test/ except .cpp files (optional)
+test/*
+!test/*.cpp
