@@ -61,7 +61,6 @@ class TensorMeta {
             numel *= dim;
         }
         rawData.assign(numel, 0.0);
-        fillRandomData();
     }
     /**
      * @brief Default constructor for TensorMeta.
@@ -98,9 +97,11 @@ class TensorMeta {
     void updateAll(double value) { rawData.assign(numel, value); }
 
     /**
-     * @brief Displays the tensor in a formatted manner.
-     * @param oss The output stream.
-     * @param meta The tensor to be displayed.
+     * @brief Shows the tensor data in a formatted manner.
+     * @param os The output stream.
+     * @param shape The shape of the tensor.
+     * @param flattenedData The flattened data of the tensor.
+     * @param startIdx The starting index for displaying.
      */
     static void showRecursive(std::ostream& os, std::vector<int> shape, const std::vector<double>& flattenedData,
                               int startIdx = 0) {

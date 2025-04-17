@@ -107,7 +107,7 @@ class TensorImpl {
     /**
      * @brief Updates the data with a new value.
      *
-     * @param updGrad The new data value.
+     * @param updData The new data value.
      */
     void updateData(TensorMeta updData) { data_ = updData; }
 };
