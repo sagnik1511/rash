@@ -14,11 +14,11 @@ const char* bool2String(bool val) { return val ? "true" : "false"; }
 namespace rash {
 
 /**
- * @brief Constructs a TensorImpl object.
+ * @brief TensorImpl class represents the implementation details of a tensor.
  *
- * @param data The tensor's data.
- * @param requiresGrad Flag to indicate if gradients are needed.
- * @param tensorTag A unique identifier for the tensor.
+ * This class is responsible for managing the tensor's data, gradients, and
+ * backward functions. It also handles the computation graph for automatic
+ * differentiation.
  */
 class TensorImpl {
    public:
@@ -29,13 +29,23 @@ class TensorImpl {
     bool requiresGrad;
     TensorMeta data_, grad;
     std::string tag;
+
+    /**
+     * @brief Constructs a TensorImpl with specified data and gradient requirements.
+     *
+     * @param data The tensor data.
+     * @param requiresGrad Indicates if gradients are required.
+     * @param tensorTag A tag for identifying the tensor.
+     */
     TensorImpl(TensorMeta data, bool requiresGrad, std::string tensorTag)
         : data_(std::move(data)), requiresGrad(requiresGrad), tag(tensorTag) {
         grad = TensorMeta(data_.shape());
         grad.updateAll(0.0);
     }
 
-    //~TensorImpl(){std::cout << "TensorImpl(id=" << id << ",tag=" << tag << ") is deleted!\n"; };
+    /**
+     * @brief Destructor for the TensorImpl class.
+     */
     ~TensorImpl() = default;
 
     /**
@@ -44,7 +54,6 @@ class TensorImpl {
     void backward() {
         // Return if already calculated the gradients
         if (gradVisited[id]) {
-            // std::cout << "Already visited id=" << id << ", tag=" << tag << std::endl;
             return;
         }
 
@@ -53,11 +62,8 @@ class TensorImpl {
 
         // Return if no backward function found!
         if (!(requiresGrad && _backward)) {
-            // std::cout << "Skipping leaf Node id=" << id << ", tag=" << tag << std::endl;
             return;
         }
-
-        // std::cout << "Running Backward for id=" << id << ", tag=" << tag << std::endl;
 
         // Perform gradient update
         _backward(grad);
@@ -121,7 +127,6 @@ class Tensor {
     Tensor(TensorMeta data, bool requiresGrad, std::string tag)
         : impl(std::make_shared<TensorImpl>(data, requiresGrad, tag)) {
         registerTensor();
-        // std::cout << "Created tensor tag=" << impl->tag << " at id=" << TENSOR_ID << std::endl;
     }
 
     /**
@@ -130,7 +135,6 @@ class Tensor {
     Tensor(double data, bool requiresGrad, std::string tag)
         : impl(std::make_shared<TensorImpl>(TensorMeta(data), requiresGrad, tag)) {
         registerTensor();
-        // std::cout << "Created tensor tag=" << impl->tag << " at id=" << TENSOR_ID << std::endl;
     };
 
     /**
@@ -139,28 +143,26 @@ class Tensor {
     Tensor(std::vector<double> data, std::vector<int> shape, bool requiresGrad, std::string tag)
         : impl(std::make_shared<TensorImpl>(TensorMeta(data, shape), requiresGrad, tag)) {
         registerTensor();
-        // std::cout << "Created tensor tag=" << impl->tag << " at id=" << TENSOR_ID << std::endl;
     }
 
-    ~Tensor() {
-        deRegisterTensor();
-        // std::cout << "Deleted tensor tag=" << impl->tag << " at id=" << TENSOR_ID << std::endl;
-    }
+    /**
+     * @brief Destructor for the Tensor class.
+     */
+    ~Tensor() { deRegisterTensor(); }
 
+    /**
+     * @brief Registers a tensor in the global storage.
+     */
     void registerTensor() {
         // globalTensorStorage[++TENSOR_ID] = impl;
         impl->id = ++TENSOR_ID;
     }
-    void deRegisterTensor() {
-        // globalTensorStorage.erase(impl->id);
-        // tempStorage[impl->id] = impl;
-    }
 
-    void clearSharedImpl(Tensor& tensor) {
-        for (auto& t : tensor.impl->prev) {
-            t.reset();
-        }
-    }
+    /**
+     * Removes a tensor from memory
+     */
+    void deRegisterTensor() {}
+
     /**
      * @brief Overloads the output stream operator for printing tensors.
      */
@@ -190,7 +192,6 @@ class Tensor {
             auto p0 = out_impl->prev[0].lock();
             auto p1 = out_impl->prev[1].lock();
 
-            // std::cout << "Performing sumBackward on " << p0->tag << " and " << p1->tag << std::endl;
             if (p0->requiresGrad)
                 p0->accumulateGrad(incGrad);
             if (p1->requiresGrad)
@@ -210,8 +211,6 @@ class Tensor {
         out.impl->_backward = [out_impl = out.impl](TensorMeta incGrad) {
             auto p0 = out_impl->prev[0].lock();
 
-            // std::cout << "Performing negBackward on " << p0->tag << std::endl;
-
             if (p0->requiresGrad)
                 p0->accumulateGrad(-incGrad);
         };
@@ -230,8 +229,6 @@ class Tensor {
         out.impl->_backward = [out_impl = out.impl](TensorMeta incGrad) {
             auto p0 = out_impl->prev[0].lock();
             auto p1 = out_impl->prev[1].lock();
-
-            // std::cout << "Performing substractBackward on " << p0->tag << " and " << p1->tag << std::endl;
 
             if (p0->requiresGrad)
                 p0->accumulateGrad(incGrad);
@@ -254,8 +251,6 @@ class Tensor {
             auto p0 = out_impl->prev[0].lock();
             auto p1 = out_impl->prev[1].lock();
 
-            // std::cout << "Performing mulBackward on " << p0->tag << " and " << p1->tag << std::endl;
-
             if (p0->requiresGrad)
                 p0->accumulateGrad(incGrad * p1->data_);
             if (p1->requiresGrad)
@@ -276,8 +271,6 @@ class Tensor {
         out.impl->_backward = [out_impl = out.impl](TensorMeta incGrad) {
             auto p0 = out_impl->prev[0].lock();
             auto p1 = out_impl->prev[1].lock();
-
-            // std::cout << "Performing divBackward on " << p0->tag << " and " << p1->tag << std::endl;
 
             if (p0->requiresGrad)
                 p0->accumulateGrad(incGrad / p1->data_);
@@ -356,7 +349,6 @@ class Tensor {
         out.impl->_backward = [out_impl = out.impl](TensorMeta incGrad) {
             auto p0 = out_impl->prev[0].lock();
 
-            // std::cout << "Performing TBackward on " << p0->tag << std::endl;
             if (p0->requiresGrad)
                 p0->accumulateGrad(incGrad.T());
         };
@@ -376,8 +368,6 @@ class Tensor {
             auto p0 = out_impl->prev[0].lock();
             auto p1 = out_impl->prev[1].lock();
 
-            // std::cout << "Performing matmulBackward on " << p0->tag << " and " << p1->tag << std::endl;
-
             if (p0->requiresGrad)
                 p0->accumulateGrad(TensorMeta::matmul(incGrad, p1->data_.transpose()));
             if (p1->requiresGrad)
@@ -387,14 +377,15 @@ class Tensor {
         return out;
     }
 
+    /**
+     *  @brief Computes power of a tensor
+     */
     Tensor pow(int n) {
         std::string newTag = "(" + impl->tag + "^" + std::to_string(n) + ")";
         Tensor out(TensorMeta::pow(impl->data_, n), impl->requiresGrad, newTag);
         out.impl->prev = {impl};
         out.impl->_backward = [out_impl = out.impl, n = n](TensorMeta incGrad) {
             auto p0 = out_impl->prev[0].lock();
-
-            // std::cout << "Performing powBackward on " << p0->tag << std::endl;
 
             if (p0->requiresGrad) {
                 p0->accumulateGrad((TensorMeta::pow(p0->data_, n - 1) * double(n)) * incGrad);
