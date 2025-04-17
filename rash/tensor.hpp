@@ -4,6 +4,7 @@
 #include <functional>
 #include <iostream>
 #include <memory>
+#include <queue>
 #include <vector>
 
 #include "tensorMeta.hpp"
@@ -13,20 +14,29 @@ const char* bool2String(bool val) { return val ? "true" : "false"; }
 namespace rash {
 
 /**
- * @brief Constructs a TensorImpl object.
+ * @brief TensorImpl class represents the implementation details of a tensor.
  *
- * @param data The tensor's data.
- * @param requiresGrad Flag to indicate if gradients are needed.
- * @param tensorTag A unique identifier for the tensor.
+ * This class is responsible for managing the tensor's data, gradients, and
+ * backward functions. It also handles the computation graph for automatic
+ * differentiation.
  */
 class TensorImpl {
    public:
-    std::map<std::string, bool> gradVisited;
+    int id;
+    std::map<int, bool> gradVisited;
     std::function<void(TensorMeta)> _backward;
     std::vector<std::weak_ptr<TensorImpl>> prev;
     bool requiresGrad;
     TensorMeta data_, grad;
     std::string tag;
+
+    /**
+     * @brief Constructs a TensorImpl with specified data and gradient requirements.
+     *
+     * @param data The tensor data.
+     * @param requiresGrad Indicates if gradients are required.
+     * @param tensorTag A tag for identifying the tensor.
+     */
     TensorImpl(TensorMeta data, bool requiresGrad, std::string tensorTag)
         : data_(std::move(data)), requiresGrad(requiresGrad), tag(tensorTag) {
         grad = TensorMeta(data_.shape());
@@ -34,24 +44,30 @@ class TensorImpl {
     }
 
     /**
+     * @brief Destructor for the TensorImpl class.
+     */
+    ~TensorImpl() = default;
+
+    /**
      * @brief Performs backpropagation through the computation graph.
      */
     void backward() {
         // Return if already calculated the gradients
-        if (gradVisited[tag]) {
+        if (gradVisited[id]) {
             return;
         }
 
         // Mark gradients calculated
-        gradVisited[tag] = true;
+        gradVisited[id] = true;
 
         // Return if no backward function found!
         if (!(requiresGrad && _backward)) {
             return;
         }
 
-        // Perform gradeint update
+        // Perform gradient update
         _backward(grad);
+        _backward = nullptr;
 
         // Backtrack to previous linked tensors
         for (auto& weak_ptr : prev) {
@@ -87,7 +103,17 @@ class TensorImpl {
      * @param updGrad The new gradient value.
      */
     void updateGrad(TensorMeta updGrad) { grad = updGrad; }
+
+    /**
+     * @brief Updates the data with a new value.
+     *
+     * @param updGrad The new data value.
+     */
+    void updateData(TensorMeta updData) { data_ = updData; }
 };
+
+int TENSOR_ID = 0;
+
 /**
  * @brief General Tensor Class
  */
@@ -99,19 +125,43 @@ class Tensor {
      * @brief Constructs a Tensor with specified data.
      */
     Tensor(TensorMeta data, bool requiresGrad, std::string tag)
-        : impl(std::make_shared<TensorImpl>(data, requiresGrad, tag)) {}
+        : impl(std::make_shared<TensorImpl>(data, requiresGrad, tag)) {
+        registerTensor();
+    }
 
     /**
      * @brief Constructs a scalar Tensor.
      */
     Tensor(double data, bool requiresGrad, std::string tag)
-        : impl(std::make_shared<TensorImpl>(TensorMeta(data), requiresGrad, tag)) {};
+        : impl(std::make_shared<TensorImpl>(TensorMeta(data), requiresGrad, tag)) {
+        registerTensor();
+    };
 
     /**
      * @brief Constructs a Tensor from a vector.
      */
     Tensor(std::vector<double> data, std::vector<int> shape, bool requiresGrad, std::string tag)
-        : impl(std::make_shared<TensorImpl>(TensorMeta(data, shape), requiresGrad, tag)) {}
+        : impl(std::make_shared<TensorImpl>(TensorMeta(data, shape), requiresGrad, tag)) {
+        registerTensor();
+    }
+
+    /**
+     * @brief Destructor for the Tensor class.
+     */
+    ~Tensor() { deRegisterTensor(); }
+
+    /**
+     * @brief Registers a tensor in the global storage.
+     */
+    void registerTensor() {
+        // globalTensorStorage[++TENSOR_ID] = impl;
+        impl->id = ++TENSOR_ID;
+    }
+
+    /**
+     * Removes a tensor from memory
+     */
+    void deRegisterTensor() {}
 
     /**
      * @brief Overloads the output stream operator for printing tensors.
@@ -127,12 +177,16 @@ class Tensor {
     }
 
     /**
+     * @brief Returns Shape of the Tensor
+     */
+    std::vector<int> shape() { return impl->data_.shape(); }
+
+    /**
      * @brief Adds two tensors.
      */
     Tensor operator+(const Tensor& other) {
         std::string newTag = "(" + this->impl->tag + "+" + other.impl->tag + ")";
         Tensor out(this->impl->data_ + other.impl->data_, this->impl->requiresGrad || other.impl->requiresGrad, newTag);
-
         out.impl->prev = {impl, other.impl};
         out.impl->_backward = [out_impl = out.impl](TensorMeta incGrad) {
             auto p0 = out_impl->prev[0].lock();
@@ -289,7 +343,7 @@ class Tensor {
      * @brief Returns the transpose of the tensor.
      */
     Tensor T() const {
-        std::string newTag = "(" + impl->tag + ").T";
+        std::string newTag = impl->tag + ".T";
         Tensor out(impl->data_.T(), impl->requiresGrad, newTag);
         out.impl->prev = {impl};
         out.impl->_backward = [out_impl = out.impl](TensorMeta incGrad) {
@@ -324,9 +378,31 @@ class Tensor {
     }
 
     /**
+     *  @brief Computes power of a tensor
+     */
+    Tensor pow(int n) {
+        std::string newTag = "(" + impl->tag + "^" + std::to_string(n) + ")";
+        Tensor out(TensorMeta::pow(impl->data_, n), impl->requiresGrad, newTag);
+        out.impl->prev = {impl};
+        out.impl->_backward = [out_impl = out.impl, n = n](TensorMeta incGrad) {
+            auto p0 = out_impl->prev[0].lock();
+
+            if (p0->requiresGrad) {
+                p0->accumulateGrad((TensorMeta::pow(p0->data_, n - 1) * double(n)) * incGrad);
+            }
+        };
+        return out;
+    }
+
+    /**
      * @brief Resets the gradient to zero.
      */
     void zeroGrad() { impl->zeroGrad(); }
+
+    /**
+     * @brief Updates tag of a tensor
+     */
+    void updateTag(std::string tag) { impl->tag = tag; }
 
     /**
      * @brief Performs backpropagation from this tensor.
@@ -335,19 +411,31 @@ class Tensor {
         impl->gradVisited.clear();
         impl->grad.updateAll(1.0);
         impl->backward();
+        impl->_backward = nullptr;
+        // for (auto& [id, impl] : tempStorage) {
+        //     impl = nullptr;
+        // }
+        // tempStorage.clear();
     }
 
     /**
      * @brief Generates a random tensor.
      */
     static Tensor rand(const std::vector<int>& shape, bool requiresGrad = false, std::string tensorTag = "") {
-        return Tensor(TensorMeta(shape), requiresGrad, tensorTag);
+        TensorMeta out(shape);
+        out.fillRandomData();
+        return Tensor(out, requiresGrad, tensorTag);
     }
 
     /**
      * @brief Retrieves the data of the tensor.
      */
     TensorMeta fetchData() const { return impl->data_; }
+
+    void updateData(TensorMeta updatedData) {
+        assert(impl->data_.shape() == updatedData.shape() && "Tensor Data Update Failed. Inconsistent incoming data!");
+        impl->updateData(updatedData);
+    }
 
     /**
      * @brief Retrieves the gradient of the tensor.

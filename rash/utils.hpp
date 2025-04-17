@@ -4,7 +4,9 @@
 #include <numeric>
 #include <vector>
 
-// Shares an array from 0 to n -1
+/**
+ * @brief Generates a range of integers from startIndex to endIndex.
+ */
 std::vector<int> arange(int startIndex, int endIndex) {
     std::vector<int> v(endIndex - startIndex, 0);
     std::iota(v.begin(), v.end(), startIndex);
@@ -12,6 +14,9 @@ std::vector<int> arange(int startIndex, int endIndex) {
     return v;
 }
 
+/**
+ * @brief Prints a vector of integers.
+ */
 void printVec(const std::vector<int>& vec) {
     std::cout << "[ ";
     for (int i = 0; i < vec.size() - 1; i++) {

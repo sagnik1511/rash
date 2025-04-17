@@ -63,8 +63,19 @@ class TensorMeta {
         rawData.assign(numel, 0.0);
         fillRandomData();
     }
+    /**
+     * @brief Default constructor for TensorMeta.
+     */
     TensorMeta() = default;
+
+    /**
+     * @brief Default destructor for TensorMeta.
+     */
     ~TensorMeta() = default;
+
+    /**
+     * @brief Copy constructor for TensorMeta.
+     */
     TensorMeta(const TensorMeta& other) : numel(other.numel), tensorSize(other.tensorSize), rawData(other.rawData) {}
 
     /**
@@ -115,10 +126,16 @@ class TensorMeta {
         }
     }
 
+    /**
+     * @brief Displays the tensor in a formatted manner.
+     */
     static void display(std::ostream& oss, const TensorMeta& meta) {
         showRecursive(oss, meta.tensorSize, meta.rawData, 0);
     }
 
+    /**
+     * @brief Overloads the output stream operator for printing tensors.
+     */
     friend std::ostream& operator<<(std::ostream& os, const TensorMeta& meta) {
         meta.display(os, meta);
         return os;
@@ -207,6 +224,12 @@ class TensorMeta {
         return finSize;
     }
 
+    /**
+     * @brief Computes the broadcasted shape for two tensors.
+     * @param dat1 The first tensor.
+     * @param dat2 The second tensor.
+     * @return The broadcasted shape.
+     */
     static std::vector<int> fetchBroadcastedSize(const TensorMeta& dat1, const TensorMeta& dat2) {
         return fetchBroadcastedSize(dat1.tensorSize, dat2.tensorSize);
     }
@@ -279,8 +302,6 @@ class TensorMeta {
         return out;
     }
 
-#pragma region ArithMaticOperators
-
     /**
      * @brief Returns the number of dimensions of the tensor.
      * @return The number of dimensions.
@@ -293,52 +314,103 @@ class TensorMeta {
      */
     std::vector<int> shape() { return tensorSize; }
 
+#pragma region ArithMaticOperators
+
+    /**
+     * @brief Computes the element-wise/broadcastabed addition of two tensors.
+     * @param other The other tensor.
+     * @return A new tensor with the result of the addition.
+     */
     TensorMeta operator+(const TensorMeta& other) const {
         std::function<double(double, double)> op = [](double val1, double val2) { return val1 + val2; };
         return TensorMeta::broadcast(*this, other, op);
     }
 
+    /**
+     * @brief Computes the element-wise/broadcastabed addition of a tensor and a scalar.
+     * @param other The scalar value.
+     * @return A new tensor with the result of the addition.
+     */
     TensorMeta operator+(double other) const {
         std::function<double(double, double)> op = [](double val1, double val2) { return val1 + val2; };
         TensorMeta otherMeta = TensorMeta({other}, {1});
         return TensorMeta::broadcast(*this, otherMeta, op);
     }
 
+    /**
+     * @brief Computes the element-wise/broadcastabed addition of two tensors and assigns the result to the first
+     * tensor.
+     * @param other The other tensor.
+     * @return A reference to the current tensor.
+     * @throws std::runtime_error if the shapes are not compatible.
+     */
     TensorMeta& operator+=(const TensorMeta& other) {
         std::function<double(double, double)> op = [](double val1, double val2) { return val1 + val2; };
         *this = std::move(TensorMeta::broadcast(*this, other, op));
         return *this;
     }
 
+    /**
+     * @brief Computes the element-wise/broadcastabed negation of the tensor.
+     * @return A new tensor with the result of the negation.
+     */
     TensorMeta operator-() {
         TensorMeta other({0}, {1});
         std::function<double(double, double)> op = [](double val1, double val2) { return val2 - val1; };
         return TensorMeta::broadcast(*this, other, op);
     }
 
+    /**
+     * @brief Computes the element-wise/broadcastabed subtraction of two tensors.
+     * @param other The other tensor.
+     * @return A new tensor with the result of the subtraction.
+     */
     TensorMeta operator-(const TensorMeta& other) const {
         std::function<double(double, double)> op = [](double val1, double val2) { return val1 - val2; };
         return TensorMeta::broadcast(*this, other, op);
     }
 
+    /**
+     * @brief Computes the element-wise/broadcastabed subtraction of a tensor and a scalar.
+     * @param other The scalar value.
+     * @return A new tensor with the result of the subtraction.
+     * @throws std::runtime_error if the shapes are not compatible.
+     */
     TensorMeta operator-(double other) const {
         std::function<double(double, double)> op = [](double val1, double val2) { return val1 - val2; };
         TensorMeta otherMeta = TensorMeta({other}, {1});
         return TensorMeta::broadcast(*this, otherMeta, op);
     }
 
+    /**
+     * @brief Computes the element-wise/broadcastabed subtraction of two tensors and assigns the result to the first
+     * tensor.
+     * @param other The other tensor.
+     * @return A reference to the current tensor.
+     * @throws std::runtime_error if the shapes are not compatible.
+     */
     TensorMeta& operator-=(const TensorMeta& other) {
         std::function<double(double, double)> op = [](double val1, double val2) { return val1 - val2; };
         *this = std::move(TensorMeta::broadcast(*this, other, op));
         return *this;
     }
 
+    /**
+     * @brief Computes the element-wise/broadcastabed multiplication of two tensors.
+     * @param other The other tensor.
+     * @return A new tensor with the result of the multiplication.
+     */
     TensorMeta operator*(const TensorMeta& other) const {
         std::function<double(double, double)> op = [](double val1, double val2) { return val1 * val2; };
         return TensorMeta::broadcast(*this, other, op);
     }
 
-    TensorMeta operator*(double other) const {
+    /**
+     * @brief Computes the element-wise/broadcastabed multiplication of a tensor and a scalar.
+     * @param other The scalar value.
+     * @return A new tensor with the result of the multiplication.
+     */
+    TensorMeta operator*(const double other) const {
         std::function<double(double, double)> op = [](double val1, double val2) { return val1 * val2; };
         TensorMeta otherMeta = TensorMeta(other);
         return TensorMeta::broadcast(*this, otherMeta, op);
@@ -349,58 +421,110 @@ class TensorMeta {
         return TensorMeta::broadcast(*this, other, op);
     }
 
+    /**
+     * @brief Computes the element-wise/broadcastabed/broadcastabed division of a tensor and a scalar.
+     * @param other The scalar value.
+     * @return A new tensor with the result of the division.
+     */
     TensorMeta operator/(double other) const {
         std::function<double(double, double)> op = [](double val1, double val2) { return val1 / val2; };
         TensorMeta otherMeta = TensorMeta(other);
         return TensorMeta::broadcast(*this, otherMeta, op);
     }
 
+    /**
+     * @brief Computes element-wise/broadcastabed greater than operation.
+     * @param other The other tensor.
+     * @return A new tensor with the result of the operation.
+     * @throws std::runtime_error if the shapes are not compatible.
+     */
     TensorMeta operator>(const TensorMeta& other) const {
         std::function<double(double, double)> op = [](double val1, double val2) { return val1 > val2; };
         return TensorMeta::broadcast(*this, other, op);
     }
 
+    /**
+     * @brief Computes element-wise/broadcastabed greater than operation with a scalar.
+     * @param other The scalar value.
+     * @return A new tensor with the result of the operation.
+     */
     TensorMeta operator>(double other) const {
         std::function<double(double, double)> op = [](double val1, double val2) { return val1 > val2; };
         TensorMeta otherMeta = TensorMeta(other);
         return TensorMeta::broadcast(*this, otherMeta, op);
     }
 
+    /**
+     * @brief Computes element-wise/broadcastabed greater than or equal to operation.
+     * @param other The other tensor.
+     * @return A new tensor with the result of the operation.
+     */
     TensorMeta operator>=(const TensorMeta& other) const {
         std::function<double(double, double)> op = [](double val1, double val2) { return val1 >= val2; };
         return TensorMeta::broadcast(*this, other, op);
     }
 
+    /**
+     * @brief Computes element-wise/broadcastabed greater than or equal to operation with a scalar.
+     * @param other The scalar value.
+     * @return A new tensor with the result of the operation.
+     */
     TensorMeta operator>=(double other) const {
         std::function<double(double, double)> op = [](double val1, double val2) { return val1 >= val2; };
         TensorMeta otherMeta = TensorMeta(other);
         return TensorMeta::broadcast(*this, otherMeta, op);
     }
 
+    /**
+     * @brief Computes element-wise/broadcastabed less than operation.
+     * @param other The other tensor.
+     * @return A new tensor with the result of the operation.
+     */
     TensorMeta operator<(const TensorMeta& other) const {
         std::function<double(double, double)> op = [](double val1, double val2) { return val1 < val2; };
         return TensorMeta::broadcast(*this, other, op);
     }
 
+    /**
+     * @brief Computes element-wise/broadcastabed less than operation with a scalar.
+     * @param other The scalar value.
+     * @return A new tensor with the result of the operation.
+     */
     TensorMeta operator<(double other) const {
         std::function<double(double, double)> op = [](double val1, double val2) { return val1 < val2; };
         TensorMeta otherMeta = TensorMeta(other);
         return TensorMeta::broadcast(*this, otherMeta, op);
     }
 
+    /**
+     * @brief Computes element-wise/broadcastabed less than or equal to operation.
+     * @param other The other tensor.
+     * @return A new tensor with the result of the operation.
+     */
     TensorMeta operator<=(const TensorMeta& other) const {
         std::function<double(double, double)> op = [](double val1, double val2) { return val1 <= val2; };
         return TensorMeta::broadcast(*this, other, op);
     }
 
+    /**
+     * @brief Computes element-wise/broadcastabed less than or equal to operation with a scalar.
+     * @param other The scalar value.
+     * @return A new tensor with the result of the operation.
+     */
     TensorMeta operator<=(double other) const {
         std::function<double(double, double)> op = [](double val1, double val2) { return val1 <= val2; };
         TensorMeta otherMeta = TensorMeta(other);
         return TensorMeta::broadcast(*this, otherMeta, op);
     }
 
+    static TensorMeta pow(const TensorMeta& meta, double power) {
+        TensorMeta other(power);
+        std::function<double(double, double)> op = [](double val1, double val2) { return std::pow(val1, val2); };
+        return TensorMeta::broadcast(meta, other, op);
+    }
+
     /**
-     * @brief Computes the element-wise exponential of the tensor.
+     * @brief Computes the element-wise/broadcastabed exponential of the tensor.
      * @param meta The input tensor.
      * @return A tensor with exponentiated values.
      */
@@ -411,7 +535,7 @@ class TensorMeta {
     }
 
     /**
-     * @brief Computes the element-wise absolute value of the tensor.
+     * @brief Computes the element-wise/broadcastabed absolute value of the tensor.
      * @param meta The input tensor.
      * @return A tensor with absolute values.
      */
@@ -482,7 +606,7 @@ class TensorMeta {
                 return true;
             } catch (const std::exception& e) {
                 // If not broadcastable
-                std::cout << e.what() << std::endl;
+                std::cerr << e.what() << std::endl;
                 return false;
             }
         }
@@ -730,6 +854,9 @@ class TensorMeta {
                 }
             }
         }
+        if (finShape.empty())
+            finShape = {1};
+
         return finShape;
     }
 
@@ -871,22 +998,22 @@ class TensorMeta {
         return out;
     }
 
-    static TensorMeta sum(const TensorMeta& meta, std::vector<int> dims, bool keepDims = false) {
+    static TensorMeta sum(const TensorMeta& meta, std::vector<int> dims = {}, bool keepDims = false) {
         std::function<double(double, double)> op = [](double a, double b) { return a + b; };
         return reduce(meta, dims, op, keepDims);
     }
 
-    static TensorMeta max(const TensorMeta& meta, std::vector<int> dims, bool keepDims = false) {
+    static TensorMeta max(const TensorMeta& meta, std::vector<int> dims = {}, bool keepDims = false) {
         std::function<double(double, double)> op = [](double a, double b) { return std::max(a, b); };
         return reduce(meta, dims, op, keepDims);
     }
 
-    static TensorMeta min(const TensorMeta& meta, std::vector<int> dims, bool keepDims = false) {
+    static TensorMeta min(const TensorMeta& meta, std::vector<int> dims = {}, bool keepDims = false) {
         std::function<double(double, double)> op = [](double a, double b) { return std::min(a, b); };
         return reduce(meta, dims, op, keepDims, DOUBLE_MAX);
     }
 
-    static TensorMeta mean(const TensorMeta& meta, std::vector<int> dims, bool keepDims = false) {
+    static TensorMeta mean(const TensorMeta& meta, std::vector<int> dims = {}, bool keepDims = false) {
         TensorMeta out = TensorMeta::sum(meta, dims, keepDims);
         int divisor = 1;
         for (auto ax : dims) {
@@ -895,10 +1022,10 @@ class TensorMeta {
         return out / double(divisor);
     }
 
-    TensorMeta sum(std::vector<int> dims, bool keepDims = false) { return sum(*this, dims, keepDims); }
-    TensorMeta min(std::vector<int> dims, bool keepDims = false) { return min(*this, dims, keepDims); }
-    TensorMeta max(std::vector<int> dims, bool keepDims = false) { return max(*this, dims, keepDims); }
-    TensorMeta mean(std::vector<int> dims, bool keepDims = false) { return mean(*this, dims, keepDims); }
+    TensorMeta sum(std::vector<int> dims = {}, bool keepDims = false) { return sum(*this, dims, keepDims); }
+    TensorMeta min(std::vector<int> dims = {}, bool keepDims = false) { return min(*this, dims, keepDims); }
+    TensorMeta max(std::vector<int> dims = {}, bool keepDims = false) { return max(*this, dims, keepDims); }
+    TensorMeta mean(std::vector<int> dims = {}, bool keepDims = false) { return mean(*this, dims, keepDims); }
 
 #pragma endregion
 
